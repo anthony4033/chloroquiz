@@ -1085,7 +1085,7 @@ async function loadPlants(){
   if(cloudOk){
     try{
       const rows = await sbGet('floralab_data','key=eq.plants&select=value');
-      if(rows.length) plants = rows[0].value;
+      if(rows.length) plants = rows[0].value.map(p=>({...p,famille:normalizeFamille(p.famille||'')||p.famille}));
       else plants = JSON.parse(JSON.stringify(DEFAULT_PLANTS));
     } catch(e){ console.warn('Supabase read plants fail',e); plantsFromLocal(); }
   } else plantsFromLocal();
@@ -2384,10 +2384,20 @@ function normalizeFamille(val){
   // Première lettre en majuscule, reste en minuscule
   val = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
   // Corriger les terminaisons françaises → latines
+  // Correspondances directes français → latin (cas non couverts par règles)
+  const direct = {
+    'graminées':'Poaceae','graminees':'Poaceae','poacées':'Poaceae',
+    'composées':'Asteraceae','composees':'Asteraceae','astéracées':'Asteraceae',
+    'légumineuses':'Fabaceae','legumineuses':'Fabaceae','fabacées':'Fabaceae',
+    'ombellifères':'Apiaceae','ombelliferes':'Apiaceae','apiacées':'Apiaceae',
+    'crucifères':'Brassicaceae','cruciferes':'Brassicaceae',
+    'liliacées':'Liliaceae','liliacees':'Liliaceae',
+    'solanacées':'Solanaceae','solanacees':'Solanaceae',
+  };
+  if(direct[val.toLowerCase()]) return direct[val.toLowerCase()];
   const replacements = [
     [/acées$/i,    'aceae'],
     [/acees$/i,    'aceae'],
-    [/acee$/i,     'aceae'],
     [/acee$/i,     'aceae'],
     [/ées$/i,      'eae'],
     [/ees$/i,      'eae'],
@@ -2511,7 +2521,7 @@ function renderAdmin(){
 async function deletePlant(id){
   const p=plants.find(x=>x.id===id); if(!p)return;
   if(!confirm(`Supprimer ${p.latin} ?`))return;
-  plants=plants.filter(x=>x.id!==id);
+  plants=plants.filter(x=>x.id!=id); // != pour tolérer number/string
   await savePlants(); renderAdmin();
 }
 
@@ -2520,7 +2530,7 @@ async function deletePlant(id){
 // ══════════════════════════════════════════════════════
 function openForm(id){
   editingId=id; formPhotoB64=null; formPhoto2B64=null;
-  const p=id?plants.find(x=>x.id===id):{};
+  const p=id?plants.find(x=>x.id==id):{}; // == pour tolérer number/string
   const v=k=>p[k]||'';
   document.getElementById('overlay-root').innerHTML=`
     <div class="form-bg" onclick="if(event.target===this)closeForm()">
@@ -2683,7 +2693,7 @@ async function savePlantForm(){
 
   const urlField  = document.getElementById('f-photo-url').value.trim();
   const urlField2 = document.getElementById('f-photo-url2').value.trim();
-  const existing  = (editingId ? (plants.find(x=>x.id===editingId)||{}) : {});
+  const existing  = (editingId ? (plants.find(x=>x.id==editingId)||{}) : {});
   const photo     = formPhotoB64  || urlField  || existing.photo  || '';
   const photo2    = formPhoto2B64 || urlField2 || existing.photo2 || '';
 
@@ -3163,6 +3173,7 @@ function renderStep1(){
       Générer les questions →
     </button>`;
   multiStep='select';
+  selectMultiLevel(multiLevel); // force le rendu des chips après injection HTML
   const btnGen = document.getElementById('btn-gen-questions');
   if(btnGen) btnGen.addEventListener('click', ()=>{ try{ goToStep2(); } catch(e){ cqErr('goToStep2:', e); alert('Erreur : '+e.message); } });
 }
