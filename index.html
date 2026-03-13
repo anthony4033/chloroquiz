@@ -224,7 +224,7 @@ html,body{min-height:100%;font-family:'DM Sans',sans-serif;background:#0b1e12;co
 /* ── Options étape 2 plus grandes ── */
 .k-opts .qopt{padding:10px 14px;font-size:15px;font-weight:600;border-radius:12px;line-height:1.25}
 @media(max-width:560px){.k-question-text{font-size:22px}.k-opts .qopt{font-size:16px;padding:14px 16px}}
-.qphoto{width:100%;height:400px;object-fit:cover;display:block}
+.qphoto-carousel{position:relative;width:100%;overflow:hidden;border-radius:0}.qphoto-track{display:flex;transition:transform .3s ease;will-change:transform}.qphoto-slide{min-width:100%;display:flex;align-items:center;justify-content:center;background:#0b1e12}.qphoto{width:100%;max-height:340px;object-fit:contain;display:block;background:#0b1e12}.qphoto-dots{display:flex;justify-content:center;gap:6px;padding:6px 0}.qphoto-dot{width:7px;height:7px;border-radius:50%;background:rgba(200,223,204,.25);transition:background .2s;cursor:pointer}.qphoto-dot.active{background:var(--g4)}
 .qphoto-fallback{width:100%;height:400px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e5030,#2d7a4a)}
 .qbody{padding:14px 16px}
 .phase-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--g4);margin-bottom:4px}
@@ -416,7 +416,7 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
 .cancel-btn:hover{background:rgba(255,100,100,.2)}
 
 /* ══ DUAL PHOTO ══ */
-.qphotos{display:grid;gap:6px}
+.qphotos{display:block}
 .qphotos.two{grid-template-columns:1fr 1fr}
 .qphotos.one{grid-template-columns:1fr}
 .qphotos .qphoto{height:360px;border-radius:0}
@@ -1666,6 +1666,7 @@ function renderQuizContainer(){
   }
   if(qPhase==='name') renderNamePrompt(c);
   else renderQuiz(c);
+  setTimeout(initCarousel, 50);
 }
 
 function renderNamePrompt(c){
@@ -1808,6 +1809,7 @@ function startQuiz(priorityMode=false){
   buildPhotoRound(); qPhase='photo';
   renderQuiz(document.getElementById('quiz-container'));
   saveQuizState();
+  setTimeout(initCarousel,50);
 }
 
 function buildPhotoRound(){
@@ -1992,16 +1994,53 @@ function topbarHTML(){
   return `<div class="quiz-topbar"><div><div style="font-family:var(--disp);font-size:26px;font-weight:900;color:var(--cr)">Quiz <em style="color:var(--am2)">Végétaux</em></div><div class="quiz-player"><strong>${qName}</strong><span class="level-pill ${lvCls2}">Niv.${qLevel}</span>${streakHTML}</div></div><div><div class="score-badge">✅ ${qScore.ok} / ${qScore.total}</div></div></div>`;
 }
 
+
+// ── Carrousel photos quiz ──
+var _carouselIdx = 0;
+function goSlide(idx){
+  _carouselIdx = idx;
+  var track = document.querySelector('.qphoto-track');
+  if(track) track.style.transform = 'translateX(-'+idx*100+'%)';
+  document.querySelectorAll('.qphoto-dot').forEach(function(d,i){
+    d.classList.toggle('active', i===idx);
+  });
+}
+function initCarousel(){
+  _carouselIdx = 0;
+  var carousel = document.querySelector('.qphoto-carousel');
+  if(!carousel) return;
+  var startX = 0, moved = false;
+  carousel.addEventListener('touchstart', function(e){
+    startX = e.touches[0].clientX; moved = false;
+  }, {passive:true});
+  carousel.addEventListener('touchmove', function(e){
+    moved = true;
+  }, {passive:true});
+  carousel.addEventListener('touchend', function(e){
+    if(!moved) return;
+    var dx = e.changedTouches[0].clientX - startX;
+    var dots = document.querySelectorAll('.qphoto-dot');
+    if(Math.abs(dx) < 40 || dots.length < 2) return;
+    if(dx < 0 && _carouselIdx === 0) goSlide(1);
+    else if(dx > 0 && _carouselIdx === 1) goSlide(0);
+  }, {passive:true});
+}
+
 function photoBlockHTML(p){
   const has2 = p.photo && p.photo2;
-  const cls = has2 ? 'two' : 'one';
-  const img1 = p.photo
-    ? `<img src="${p.photo}" class="qphoto" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy"/><div class="qphoto-fallback" style="display:none">${LEAF_SVG}</div>`
-    : `<div class="qphoto-fallback">${LEAF_SVG}</div>`;
-  const img2 = has2
-    ? `<img src="${p.photo2}" class="qphoto" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy"/><div class="qphoto-fallback" style="display:none">${LEAF_SVG}</div>`
+  const slide1 = p.photo
+    ? `<div class="qphoto-slide"><img src="${p.photo}" class="qphoto" onerror="this.style.display='none'" loading="lazy"/></div>`
+    : `<div class="qphoto-slide"><div class="qphoto-fallback">${LEAF_SVG}</div></div>`;
+  const slide2 = has2
+    ? `<div class="qphoto-slide"><img src="${p.photo2}" class="qphoto" onerror="this.style.display='none'" loading="lazy"/></div>`
     : '';
-  return `<div class="qphotos ${cls}">${img1}${img2}</div>`;
+  const dots = has2
+    ? `<div class="qphoto-dots"><span class="qphoto-dot active" onclick="goSlide(0)"></span><span class="qphoto-dot" onclick="goSlide(1)"></span></div>`
+    : '';
+  const id = 'qpc-'+Date.now();
+  return `<div class="qphotos"><div class="qphoto-carousel" id="${id}">`
+    +`<div class="qphoto-track">${slide1}${slide2}</div>`
+    +`</div>${dots}</div>`;
 }
 
 function renderQuiz(c){
@@ -2078,7 +2117,7 @@ function onPhotoTimeout(){
   qHistory.push({latin:qRound.correct.latin, nom:qRound.correct.nom,
     step1Type:'identification', step1Ok:false, step1Correct:qRound.correct.latin,
     step2Label:'—', step2Ok:null, step2Correct:'—'});
-  renderQuiz(); stopTimer();
+  renderQuiz(); stopTimer(); setTimeout(initCarousel,50);
   document.querySelectorAll('.qopt').forEach(btn=>{
     btn.disabled=true;
     const latin=btn.querySelector('.opt-latin');
@@ -2091,7 +2130,7 @@ function onPhotoTimeout(){
 function onKTimeout(){
   stopTimer(); qKSel='__timeout__'; qScore.total++; qScore.timeouts++;
   if(qHistory.length){ const h=qHistory[qHistory.length-1]; h.step2Label=qKQ?qKQ.field.label:'—'; h.step2Ok=false; h.step2Correct=qKQ?qKQ.correct:'—'; }
-  qPhase='k-done'; renderQuiz(); stopTimer();
+  qPhase='k-done'; renderQuiz(); setTimeout(initCarousel,50); stopTimer(); setTimeout(initCarousel,50);
 }
 
 function pickPhoto(btn,latin,id){
@@ -2102,7 +2141,7 @@ function pickPhoto(btn,latin,id){
   qHistory.push({latin:qRound.correct.latin, nom:qRound.correct.nom,
     step1Type:'identification', step1Ok:isOk, step1Correct:qRound.correct.latin,
     step2Label:'—', step2Ok:null, step2Correct:'—'});
-  renderQuiz(); stopTimer();
+  renderQuiz(); stopTimer(); setTimeout(initCarousel,50);
   setTimeout(()=>showCelebration(isOk,false),500);
 }
 
@@ -2123,6 +2162,7 @@ function closeCelebration(){
   // Étape 2 : toujours une question de caractéristique
   qKQ=buildKQ(); qKSel=null; qPhase='knowledge';
   renderQuiz(document.getElementById('quiz-container'));
+  setTimeout(initCarousel,50);
 }
 
 // ── Orthographe en étape 1 ──
@@ -2135,6 +2175,7 @@ function pickPhotoSpelling(btn){
     step1Type:'orthographe', step1Ok:isOk, step1Correct:qSQ.correct,
     step2Label:'—', step2Ok:null, step2Correct:'—'});
   renderQuiz(document.getElementById('quiz-container'));
+  setTimeout(initCarousel,50);
 }
 
 function onPhotoSpellingTimeout(){
@@ -2166,11 +2207,13 @@ function pickK(btn){
   // Mettre à jour la dernière entrée historique
   if(qHistory.length){ const h=qHistory[qHistory.length-1]; h.step2Label=qKQ.field.label; h.step2Ok=isOk; h.step2Correct=qKQ.correct; }
   qPhase='k-done'; renderQuiz(document.getElementById('quiz-container'));
+  setTimeout(initCarousel,50);
 }
 
 function onSTimeout(){
   stopTimer(); qSSel='__timeout__'; qScore.total++; qScore.timeouts++;
   qPhase='s-done'; renderQuiz(document.getElementById('quiz-container'));
+  setTimeout(initCarousel,50);
 }
 
 function nextRound(){
@@ -2179,6 +2222,7 @@ function nextRound(){
   buildPhotoRound(); qKQ=null; qKSel=null; qPhase='photo';
   renderQuiz(document.getElementById('quiz-container'));
   saveQuizState();
+  setTimeout(initCarousel,50);
 }
 
 async function renderEnd(c){
