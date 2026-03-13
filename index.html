@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-  <meta name="app-version" content="2026-03-13-v5"/>
+  <meta name="app-version" content="2026-03-13-v6"/>
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="ChloroQuiz">
@@ -2376,7 +2376,7 @@ function onFamilleBlur(el){
 }
 
 // Tous les champs disponibles pour le filtre questions multi
-const MULTI_ALL_FIELDS = [
+var MULTI_ALL_FIELDS = [
   {key:'photo',            label:'Reconnaissance',     icon:'📸', levels:[1,2,3]},
   {key:'feuillage',        label:'Feuillage',          icon:'🍃', levels:[1,2,3]},
   {key:'rusticite',        label:'Rusticité',          icon:'🌡️', levels:[1,2,3]},
@@ -3846,7 +3846,7 @@ if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         const currentFile = window.location.pathname.split("/").pop() || './';
         const swCode = `
-          const CACHE = 'chloroquiz-v5';
+          const CACHE = 'chloroquiz-v6';
           self.addEventListener('install', e => {
             e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './' + currentFile])));
             self.skipWaiting();
