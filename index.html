@@ -1981,7 +1981,7 @@ function timerHTML(current, total){
 function topbarHTML(){
   const lvCls2=qLevel===3?'lv3':qLevel===2?'lv2':'lv1';
   const streakHTML=qStreak>=3?`<span class="streak-badge">🔥 ×${qStreak}</span>`:'';
-  return `<div class="quiz-topbar"><div><div style="font-family:var(--disp);font-size:26px;font-weight:900;color:var(--cr)">Quiz <em style="color:var(--am2)">Végétaux</em></div><div class="quiz-player"><strong>${qName}</strong><span class="level-pill ${lvCls2}">Niv.${qLevel}</span>${streakHTML}</div></div><div><div class="score-badge">✅ ${qScore.ok} / ${qScore.total}</div><div class="round-info">Question ${qNum} / 20</div></div></div>`;
+  return `<div class="quiz-topbar"><div><div style="font-family:var(--disp);font-size:26px;font-weight:900;color:var(--cr)">Quiz <em style="color:var(--am2)">Végétaux</em></div><div class="quiz-player"><strong>${qName}</strong><span class="level-pill ${lvCls2}">Niv.${qLevel}</span>${streakHTML}</div></div><div><div class="score-badge">✅ ${qScore.ok} / ${qScore.total}</div></div></div>`;
 }
 
 function photoBlockHTML(p){
@@ -2020,7 +2020,7 @@ function renderQuiz(c){
         }</div>`;
         nextBtn=`<button class="next-btn" onclick="afterPhotoSpelling()">Étape 2 — Caractéristiques →</button>`;
       }
-      c.innerHTML=topbarHTML()+`<div class="qcard">${photoBlock}<div class="qbody">${!qSSel?timerHTML(qNum+1, qPlants.length):''}<div class="phase-label">✍️ Étape 1 — Orthographe botanique</div><div class="q-text">Quelle est l'écriture exacte du nom botanique ?</div><div class="q-opts">${opts}</div>${feedback}${nextBtn}</div></div>`;
+      c.innerHTML=topbarHTML()+`<div class="qcard">${photoBlock}<div class="qbody">${!qSSel?timerHTML(qNum, 20):''}<div class="phase-label">✍️ Étape 1 — Orthographe botanique</div><div class="q-text">Quelle est l'écriture exacte du nom botanique ?</div><div class="q-opts">${opts}</div>${feedback}${nextBtn}</div></div>`;
       if(!qSSel) startTimer(()=>onPhotoSpellingTimeout());
     } else {
       // ── Étape 1 : Identification classique ──
@@ -2031,7 +2031,7 @@ function renderQuiz(c){
         return `<button class="${cls}" ${dis} onclick="pickPhoto(this,'${opt.latin.replace(/'/g,"\\'")}','${opt.id}')">
           <span class="opt-latin">${opt.latin}</span></button>`;
       }).join('');
-      c.innerHTML=topbarHTML()+`<div class="qcard">${photoBlock}<div class="qbody">${timerHTML(qNum+1, qPlants.length)}<div class="phase-label">📸 Étape 1 — Identification</div><div class="q-text">Quel est ce végétal ?</div><div class="q-opts">${opts}</div></div></div>`;
+      c.innerHTML=topbarHTML()+`<div class="qcard">${photoBlock}<div class="qbody">${timerHTML(qNum, 20)}<div class="phase-label">📸 Étape 1 — Identification</div><div class="q-text">Quel est ce végétal ?</div><div class="q-opts">${opts}</div></div></div>`;
       startTimer(()=>onPhotoTimeout());
     }
   }
@@ -2056,7 +2056,7 @@ function renderQuiz(c){
         <div class="k-question-text">${qKQ.question}</div>
       </div>
       <div class="qbody" style="padding:24px">
-        ${qPhase==='knowledge'?timerHTML(qNum+1, qPlants.length):''}
+        ${qPhase==='knowledge'?timerHTML(qNum, 20):''}
         <div class="q-opts k-opts">${opts}</div>
         ${feedback}${nextBtn}
       </div>
