@@ -1134,6 +1134,14 @@ function sbHeaders(extra={}){
   };
 }
 
+async function sbPatch(table, filters, body){
+  const url = sbConf.url+'/rest/v1/'+table+'?'+filters;
+  const h = sbHeaders({'Prefer':'return=minimal'});
+  const r = await fetch(url, {method:'PATCH', headers:h, body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(await r.text());
+  return null;
+}
+
 async function sbGet(table, params=''){
   const r = await fetch(`${sbConf.url}/rest/v1/${table}?${params}`, {headers: sbHeaders()});
   if(!r.ok) throw new Error(await r.text());
@@ -3656,7 +3664,7 @@ async function confirmJoinSession(code){
     await sbPost('floralab_session_players',{
       session_code:code, player_name:fullName,
       score:0, total:0, current_q:0, done:false
-    },'resolution=merge-duplicates&on_conflict=session_code,player_name');
+    },'return=minimal');
     // Si session en attente, attendre le démarrage
     if(session.status==='waiting'){
       showSessionWaitRoom(code, fullName, session.questions);
@@ -3752,7 +3760,7 @@ async function pickSessionAnswer(btn, answer, code){
   document.querySelectorAll('.qopt').forEach(b=>{ b.disabled=true; if(b.textContent.trim()===q.correct) b.classList.add('correct'); else if(b===btn&&!ok) b.classList.add('wrong'); });
   // Mettre à jour score dans Supabase
   sessionQIdx++;
-  try{ await sbPost('floralab_session_players',{session_code:code,player_name:sessionPlayerName,score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length},'resolution=merge-duplicates&on_conflict=session_code,player_name'); }catch(e){}
+  try{ await sbPatch('floralab_session_players','session_code=eq.'+code+'&player_name=eq.'+encodeURIComponent(sessionPlayerName),{score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length,updated_at:new Date().toISOString()}); }catch(e){ cqErr('PATCH score failed:',e); }
   // Bouton suivant
   const nextBtn = document.createElement('button');
   nextBtn.className='next-btn'; nextBtn.textContent = sessionQIdx>=sessionQuestions.length ? 'Voir les résultats →' : 'Question suivante →';
@@ -3761,7 +3769,7 @@ async function pickSessionAnswer(btn, answer, code){
 }
 async function onSessionTimeout(code){
   stopTimer(); sessionScore.total++; sessionQIdx++;
-  try{ sbPost('floralab_session_players',{session_code:code,player_name:sessionPlayerName,score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length},'resolution=merge-duplicates&on_conflict=session_code,player_name'); }catch(e){}
+  try{ await sbPatch('floralab_session_players','session_code=eq.'+code+'&player_name=eq.'+encodeURIComponent(sessionPlayerName),{score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length,updated_at:new Date().toISOString()}); }catch(e){}
   renderSessionQuestion(code);
 }
 async function pollSessionLb(code){
