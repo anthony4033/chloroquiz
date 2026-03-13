@@ -2766,7 +2766,7 @@ function tempColor(idx){
   }
 }
 
-let tempPickerVal = {};
+var tempPickerVal = {};
 
 function renderTempPicker(fieldId, currentVal){
   tempPickerVal[fieldId] = currentVal || '';
@@ -2818,7 +2818,7 @@ var TAILLES = (()=>{
   return t;
 })();
 // sizePickers[fieldId] = {min: idx|null, max: idx|null}
-const sizePickers = {};
+var sizePickers = {};
 
 function parseSizeToIdx(str){
   if(!str) return null;
