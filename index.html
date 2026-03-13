@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-  <meta name="app-version" content="2026-03-13-v6"/>
+  <meta name="app-version" content="2026-03-13-v7"/>
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="ChloroQuiz">
@@ -2394,6 +2394,7 @@ var MULTI_ALL_FIELDS = [
 ];
 
 function toggleFieldFilter(key){
+  if(!multiFieldFilter) multiFieldFilter = [];
   if(multiFieldFilter.includes(key)){
     multiFieldFilter = multiFieldFilter.filter(k=>k!==key);
   } else {
@@ -3137,14 +3138,14 @@ function renderStep1(){
     <div class="field-filter-wrap">
       <div class="field-filter-title">🎯 Types de questions</div>
       <div class="field-chips" id="field-chips-wrap">
-        ${MULTI_ALL_FIELDS.filter(f=>f.levels.includes(multiLevel)).map(f=>`
-          <div class="fchip ${multiFieldFilter.includes(f.key)?'active':''}" data-key="${f.key}" onclick="toggleFieldFilter('${f.key}')">
+        ${(MULTI_ALL_FIELDS||[]).filter(f=>f.levels.includes(multiLevel)).map(f=>`
+          <div class="fchip ${(multiFieldFilter||[]).includes(f.key)?'active':''}" data-key="${f.key}" onclick="toggleFieldFilter('${f.key}')">
             <span class="fchip-icon">${f.icon}</span>${f.label}
           </div>`).join('')}
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
         <button class="psel-btn" style="font-size:11px;padding:5px 10px" onclick="selectAllFields()">Tout (sans filtre)</button>
-        <div class="field-filter-hint" id="field-filter-hint">${multiFieldFilter.length===0?'Tous les types de questions (aucun filtre)':multiFieldFilter.length+' type(s) sélectionné(s)'}</div>
+        <div class="field-filter-hint" id="field-filter-hint">${(multiFieldFilter||[]).length===0?'Tous les types de questions (aucun filtre)':(multiFieldFilter||[]).length+' type(s) sélectionné(s)'}</div>
       </div>
     </div>
     <button id="btn-gen-questions" style="width:100%;padding:14px;background:linear-gradient(135deg,#1e5030,#2d7a4a);border:none;border-radius:14px;color:white;font-size:15px;font-weight:700;cursor:pointer">
@@ -3171,15 +3172,15 @@ function selectMultiLevel(n){
     if(b) b.classList.toggle('selected', i===n);
   });
   // Retirer du filtre les champs non disponibles à ce niveau
-  multiFieldFilter = multiFieldFilter.filter(k=>{
-    const f = MULTI_ALL_FIELDS.find(x=>x.key===k);
+  multiFieldFilter = (multiFieldFilter||[]).filter(k=>{
+    const f = (MULTI_ALL_FIELDS||[]).find(x=>x.key===k);
     return f && f.levels.includes(n);
   });
   // Rafraîchir les chips
   const wrap = document.getElementById('field-chips-wrap');
   if(wrap){
-    wrap.innerHTML = MULTI_ALL_FIELDS.filter(f=>f.levels.includes(n)).map(f=>`
-      <div class="fchip ${multiFieldFilter.includes(f.key)?'active':''}" data-key="${f.key}" onclick="toggleFieldFilter('${f.key}')">
+    wrap.innerHTML = (MULTI_ALL_FIELDS||[]).filter(f=>f.levels.includes(n)).map(f=>`
+      <div class="fchip ${(multiFieldFilter||[]).includes(f.key)?'active':''}" data-key="${f.key}" onclick="toggleFieldFilter('${f.key}')">
         <span class="fchip-icon">${f.icon}</span>${f.label}
       </div>`).join('');
   }
@@ -3280,7 +3281,7 @@ function generateOneQuestion(pool, level, usedPlantIds){
   if(!p) return null;
 
   // Déterminer les types autorisés selon le filtre
-  const filter = multiFieldFilter; // [] = tout autorisé
+  const filter = (typeof multiFieldFilter !== 'undefined' && multiFieldFilter) ? multiFieldFilter : [];
   const allowPhoto       = filter.length===0 || filter.includes('photo');
   const allowKnowledge   = filter.length===0 || filter.some(k=>k!=='photo' && k!=='n3');
   const allowN3          = (filter.length===0 || filter.includes('n3')) && level===3;
@@ -3846,7 +3847,7 @@ if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         const currentFile = window.location.pathname.split("/").pop() || './';
         const swCode = `
-          const CACHE = 'chloroquiz-v6';
+          const CACHE = 'chloroquiz-v7';
           self.addEventListener('install', e => {
             e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './' + currentFile])));
             self.skipWaiting();
