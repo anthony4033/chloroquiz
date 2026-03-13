@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-  <meta name="app-version" content="2026-03-13-v7"/>
+  <meta name="app-version" content="2026-03-13-v8"/>
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="ChloroQuiz">
@@ -546,7 +546,7 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
 .multi-step{display:none}
 .multi-step.active{display:block}
 .multi-step-title{font-family:var(--disp);font-size:20px;font-weight:900;color:var(--cr);margin-bottom:16px}
-.plant-select-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;max-height:380px;overflow-y:auto;padding:4px;margin-bottom:14px}
+.plant-select-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;max-height:320px;overflow-y:auto;padding:4px;margin-bottom:14px}
 .psel-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(11,30,18,.7);border:1px solid rgba(74,184,112,.15);border-radius:12px;cursor:pointer;transition:all .2s}
 .psel-item:hover{border-color:rgba(74,184,112,.4)}
 .psel-item.selected{border-color:var(--g4);background:rgba(74,184,112,.1)}
@@ -844,6 +844,7 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
 </div>
 
 <script>
+console.log('[ChloroQuiz] Version 2026-03-13-v8 chargée');
 // ══════════════════════════════════════════════════════
 //  CONSTANTES
 // ══════════════════════════════════════════════════════
@@ -947,6 +948,25 @@ const FILLERS = {
   interetOrnemental:['Floraison décorative','Feuillage décoratif','Fruits & baies décoratifs','Port architectural','Feuillage automnal','Silhouette hivernale','Bois / Tige / Rameau décoratif','Tapis fleuri'],
   autresInterets:['Mellifère','Médicinale','Feuillage aromatique','Comestible / Fruitière','Plante hôte','Toxique','Épineuse / Défensive','Fixatrice d\'azote'],
 };
+
+// Tous les champs disponibles pour le filtre questions multi
+var MULTI_ALL_FIELDS = [
+  {key:'photo',            label:'Reconnaissance',     icon:'📸', levels:[1,2,3]},
+  {key:'feuillage',        label:'Feuillage',          icon:'🍃', levels:[1,2,3]},
+  {key:'rusticite',        label:'Rusticité',          icon:'🌡️', levels:[1,2,3]},
+  {key:'exposition',       label:'Exposition',         icon:'☀️', levels:[1,2,3]},
+  {key:'ph',               label:'pH du sol',          icon:'🧪', levels:[1,2,3]},
+  {key:'resistanceSech',   label:'Sécheresse',         icon:'💧', levels:[1,2,3]},
+  {key:'hauteurAdulte',    label:'Hauteur',            icon:'📏', levels:[1,2,3]},
+  {key:'largeurAdulte',    label:'Largeur',            icon:'↔️', levels:[1,2,3]},
+  {key:'periodeFloraison', label:'Floraison',          icon:'🌸', levels:[1,2,3]},
+  {key:'couleurFleurs',    label:'Couleur fleurs',     icon:'🎨', levels:[1,2,3]},
+  {key:'famille',          label:'Famille botanique',  icon:'🔬', levels:[2,3]},
+  {key:'interetOrnemental',label:'Intérêt ornemental', icon:'🌿', levels:[2,3]},
+  {key:'autresInterets',   label:'Autres intérêts',    icon:'⭐', levels:[2,3]},
+  {key:'n3',               label:'Mise en situation',  icon:'🏗️', levels:[3]},
+];
+
 
 const DEFAULT_PLANTS = [
   {id:1,photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Lavandula_angustifolia_in_Murato.jpg/480px-Lavandula_angustifolia_in_Murato.jpg',latin:'Lavandula angustifolia',nom:'Lavande officinale',famille:'Lamiaceae',type:'Sous-arbrisseau',feuillage:'Persistant',rusticite:'-25 / -20°C',exposition:'Soleil',ph:'Neutre à basique',resistanceSech:'Élevée',hauteurAdulte:'0.3 – 0.6 m',largeurAdulte:'0.4 – 0.8 m',periodeFloraison:'Juin – Août',couleurFleurs:'Violet, Mauve',interetOrnemental:'Floraison décorative,Feuillage décoratif,Floraison parfumée',autresInterets:'Mellifère,Médicinale,Feuillage aromatique',usageAmenagement:'Massif,Bordure,Couvre-sol,Rocaille,Talus',description:"Plante aromatique méditerranéenne très appréciée pour ses fleurs parfumées et sa résistance à la sécheresse."},
@@ -2375,24 +2395,6 @@ function onFamilleBlur(el){
   el.value = normalizeFamille(el.value);
 }
 
-// Tous les champs disponibles pour le filtre questions multi
-var MULTI_ALL_FIELDS = [
-  {key:'photo',            label:'Reconnaissance',     icon:'📸', levels:[1,2,3]},
-  {key:'feuillage',        label:'Feuillage',          icon:'🍃', levels:[1,2,3]},
-  {key:'rusticite',        label:'Rusticité',          icon:'🌡️', levels:[1,2,3]},
-  {key:'exposition',       label:'Exposition',         icon:'☀️', levels:[1,2,3]},
-  {key:'ph',               label:'pH du sol',          icon:'🧪', levels:[1,2,3]},
-  {key:'resistanceSech',   label:'Sécheresse',         icon:'💧', levels:[1,2,3]},
-  {key:'hauteurAdulte',    label:'Hauteur',            icon:'📏', levels:[1,2,3]},
-  {key:'largeurAdulte',    label:'Largeur',            icon:'↔️', levels:[1,2,3]},
-  {key:'periodeFloraison', label:'Floraison',          icon:'🌸', levels:[1,2,3]},
-  {key:'couleurFleurs',    label:'Couleur fleurs',     icon:'🎨', levels:[1,2,3]},
-  {key:'famille',          label:'Famille botanique',  icon:'🔬', levels:[2,3]},
-  {key:'interetOrnemental',label:'Intérêt ornemental', icon:'🌿', levels:[2,3]},
-  {key:'autresInterets',   label:'Autres intérêts',    icon:'⭐', levels:[2,3]},
-  {key:'n3',               label:'Mise en situation',  icon:'🏗️', levels:[3]},
-];
-
 function toggleFieldFilter(key){
   if(!multiFieldFilter) multiFieldFilter = [];
   if(multiFieldFilter.includes(key)){
@@ -3094,7 +3096,7 @@ function renderMultiTab(){
     </button>`;
   // addEventListener — plus fiable que onclick dans innerHTML
   const btnCreate = document.getElementById('btn-create-session');
-  if(btnCreate) btnCreate.addEventListener('click', ()=>{ try{ startMultiStep1(); } catch(e){ alert('Erreur : '+e.message); } });
+  if(btnCreate) btnCreate.addEventListener('click', ()=>{ try{ startMultiStep1(); } catch(e){ console.error('[ChloroQuiz] startMultiStep1 error:', e); alert('Erreur : '+e.message+'\n\nStack: '+e.stack?.split('\n').slice(0,3).join(' | ')); } });
 }
 
 // ══════════════════════════════════════════════════════
@@ -3106,6 +3108,8 @@ function startMultiStep1(){
   renderStep1();
 }
 function renderStep1(){
+  console.log('[CQ] renderStep1 — MULTI_ALL_FIELDS:', Array.isArray(MULTI_ALL_FIELDS) ? MULTI_ALL_FIELDS.length + ' items' : String(MULTI_ALL_FIELDS));
+  console.log('[CQ] multiLevel:', multiLevel, '| multiFieldFilter:', JSON.stringify(multiFieldFilter));
   const c = document.getElementById('multi-container');
   const items = plants.map(p=>`
     <div class="psel-item ${multiSelectedIds.has(p.id)?'selected':''}" onclick="togglePlantSel(${p.id},this)">
@@ -3120,12 +3124,6 @@ function renderStep1(){
   c.innerHTML=`
     <button style="background:none;border:none;color:rgba(200,223,204,.45);cursor:pointer;font-size:13px;margin-bottom:12px" onclick="renderMultiTab()">← Retour</button>
     <div class="multi-step-title">Étape 1 — Sélectionner les plantes</div>
-    <div class="psel-controls">
-      <button class="psel-btn" onclick="selectAllPlants(true)">✅ Tout sélectionner</button>
-      <button class="psel-btn" onclick="selectAllPlants(false)">☐ Tout désélectionner</button>
-    </div>
-    <div class="psel-count" id="psel-count">${multiSelectedIds.size} plante(s) sélectionnée(s)</div>
-    <div class="plant-select-grid">${items}</div>
     <div style="margin-bottom:14px">
       <label style="font-size:12px;color:rgba(200,223,204,.45);display:block;margin-bottom:6px">Niveau des questions</label>
       <div style="display:flex;gap:8px">
@@ -3148,12 +3146,18 @@ function renderStep1(){
         <div class="field-filter-hint" id="field-filter-hint">${(multiFieldFilter||[]).length===0?'Tous les types de questions (aucun filtre)':(multiFieldFilter||[]).length+' type(s) sélectionné(s)'}</div>
       </div>
     </div>
+    <div class="psel-controls">
+      <button class="psel-btn" onclick="selectAllPlants(true)">✅ Tout sélectionner</button>
+      <button class="psel-btn" onclick="selectAllPlants(false)">☐ Tout désélectionner</button>
+    </div>
+    <div class="psel-count" id="psel-count">${multiSelectedIds.size} plante(s) sélectionnée(s)</div>
+    <div class="plant-select-grid">${items}</div>
     <button id="btn-gen-questions" style="width:100%;padding:14px;background:linear-gradient(135deg,#1e5030,#2d7a4a);border:none;border-radius:14px;color:white;font-size:15px;font-weight:700;cursor:pointer">
       Générer les questions →
     </button>`;
   multiStep='select';
   const btnGen = document.getElementById('btn-gen-questions');
-  if(btnGen) btnGen.addEventListener('click', ()=>{ try{ goToStep2(); } catch(e){ alert('Erreur : '+e.message); } });
+  if(btnGen) btnGen.addEventListener('click', ()=>{ try{ goToStep2(); } catch(e){ console.error('[ChloroQuiz] goToStep2 error:', e); alert('Erreur : '+e.message+'\n\nStack: '+e.stack?.split('\n').slice(0,3).join(' | ')); } });
 }
 function togglePlantSel(id, el){
   const item = el.classList.contains('psel-item') ? el : el.closest('.psel-item');
@@ -3166,6 +3170,7 @@ function selectAllPlants(sel){
   renderStep1();
 }
 function selectMultiLevel(n){
+  console.log('[CQ] selectMultiLevel('+n+') — MULTI_ALL_FIELDS:', Array.isArray(MULTI_ALL_FIELDS) ? MULTI_ALL_FIELDS.length + ' items' : String(MULTI_ALL_FIELDS));
   multiLevel=n;
   [1,2,3].forEach(i=>{
     const b=document.getElementById('mlc-'+i);
@@ -3839,37 +3844,12 @@ function exportMonitorCSV(){
   <script>
     // Désinscrire les anciens Service Workers
 if ('serviceWorker' in navigator) {
+  // Désinstaller tous les anciens Service Workers et vider les caches
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(reg => reg.unregister());
   });
+  caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
 }
-if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        const currentFile = window.location.pathname.split("/").pop() || './';
-        const swCode = `
-          const CACHE = 'chloroquiz-v7';
-          self.addEventListener('install', e => {
-            e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './' + currentFile])));
-            self.skipWaiting();
-          });
-          self.addEventListener('activate', e => {
-            e.waitUntil(caches.keys().then(keys => Promise.all(
-              keys.filter(k => k !== CACHE).map(k => caches.delete(k))
-            )));
-            self.clients.claim();
-          });
-          self.addEventListener('fetch', e => {
-            if(e.request.mode === 'navigate'){
-              e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-            } else {
-              e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
-            }
-          });
-        `;
-        const blob = new Blob([swCode], {type: 'application/javascript'});
-        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
-      });
-    }
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
