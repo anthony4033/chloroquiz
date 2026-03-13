@@ -603,7 +603,7 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
 .join-btn{padding:13px 22px;background:linear-gradient(135deg,#2060c8,#3a80e0);border:none;border-radius:14px;color:white;font-size:15px;font-weight:700;cursor:pointer}
 /* Session quiz overlay */
 .session-quiz-wrap{max-width:680px;margin:0 auto}
-.session-live-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(32,96,200,.1);border:1px solid rgba(50,130,220,.25);border-radius:12px;margin-bottom:16px;font-size:12px}
+.session-live-bar{display:flex;flex-direction:column;gap:7px;padding:8px 14px 6px;background:rgba(32,96,200,.1);border:1px solid rgba(50,130,220,.25);border-radius:12px;margin-bottom:14px;font-size:12px}.session-live-bar-row{display:flex;align-items:center;justify-content:space-between;gap:8px}.session-q-progress{height:4px;border-radius:4px;background:rgba(50,130,220,.18);overflow:hidden}.session-q-progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--g4),#7ab8f5);transition:width .3s}.session-q-counter{font-weight:800;font-size:13px;color:var(--g4);letter-spacing:0.5px;white-space:nowrap}
 .session-live-dot{width:8px;height:8px;background:#ff4444;border-radius:50%;animation:pulse-red 1s infinite}
 @keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.3}}
 .session-mini-lb{display:flex;flex-direction:column;gap:4px;margin-top:16px}
@@ -1140,9 +1140,21 @@ async function sbGet(table, params=''){
   return r.json();
 }
 
-async function sbPost(table, body, prefer=''){
+async function sbPost(table, body, preferOrQuery=''){
+  // Sépare on_conflict (queryString) du Prefer header
+  var qs = '', prefer = '';
+  if(preferOrQuery.includes('on_conflict=')){
+    var parts = preferOrQuery.split('&');
+    parts.forEach(function(p){
+      if(p.startsWith('on_conflict=')) qs = p;
+      else if(p) prefer = p;
+    });
+  } else {
+    prefer = preferOrQuery;
+  }
+  const url = sbConf.url+'/rest/v1/'+table+(qs?'?'+qs:'');
   const h = sbHeaders(prefer ? {'Prefer': prefer} : {});
-  const r = await fetch(`${sbConf.url}/rest/v1/${table}`, {method:'POST', headers:h, body:JSON.stringify(body)});
+  const r = await fetch(url, {method:'POST', headers:h, body:JSON.stringify(body)});
   if(!r.ok) throw new Error(await r.text());
   return r.status === 204 ? null : r.json().catch(()=>null);
 }
@@ -3706,9 +3718,14 @@ async function renderSessionQuestion(code){
   c.innerHTML=`
     <div class="session-quiz-wrap">
       <div class="session-live-bar">
-        <span><span class="session-live-dot"></span> Session live <strong style="color:var(--g4)">${code}</strong></span>
-        <span style="color:rgba(200,223,204,.5)">${sessionPlayerName}</span>
-        <span style="color:var(--g4)">Q${sessionQIdx+1}/${sessionQuestions.length}</span>
+        <div class="session-live-bar-row">
+          <span><span class="session-live-dot"></span> Session <strong style="color:var(--g4)">${code}</strong></span>
+          <span class="session-q-counter">Q${sessionQIdx+1} / ${sessionQuestions.length}</span>
+          <span style="color:rgba(200,223,204,.45);font-size:11px">${sessionPlayerName}</span>
+        </div>
+        <div class="session-q-progress">
+          <div class="session-q-progress-fill" style="width:${Math.round((sessionQIdx+1)/sessionQuestions.length*100)}%"></div>
+        </div>
       </div>
       <div class="qcard">
         ${isPhoto ? photoHtml : ''}
