@@ -844,7 +844,14 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
 </div>
 
 <script>
-console.log('[ChloroQuiz] Version 2026-03-13-v8 chargée');
+// ══════════════════════════════════════════════════════
+//  MODE DEBUG
+// ══════════════════════════════════════════════════════
+const CQ_DEBUG = false; // passer à true pour activer les logs de diagnostic
+function cqLog(...a){ if(CQ_DEBUG) console.log('[CQ]', ...a); }
+function cqWarn(...a){ if(CQ_DEBUG) console.warn('[CQ]', ...a); }
+function cqErr(...a){ console.error('[CQ]', ...a); } // erreurs toujours visibles
+
 // ══════════════════════════════════════════════════════
 //  CONSTANTES
 // ══════════════════════════════════════════════════════
@@ -1396,6 +1403,7 @@ function clearQuizState(){
   try{ localStorage.removeItem(SK_QUIZ_STATE); }catch(e){}
 }
 async function tryRestoreSession(){
+  cqLog('tryRestoreSession — vérification...');
   try{
     const raw = localStorage.getItem(SK_SESSION);
     if(!raw) return false;
@@ -3096,7 +3104,7 @@ function renderMultiTab(){
     </button>`;
   // addEventListener — plus fiable que onclick dans innerHTML
   const btnCreate = document.getElementById('btn-create-session');
-  if(btnCreate) btnCreate.addEventListener('click', ()=>{ try{ startMultiStep1(); } catch(e){ console.error('[ChloroQuiz] startMultiStep1 error:', e); alert('Erreur : '+e.message+'\n\nStack: '+e.stack?.split('\n').slice(0,3).join(' | ')); } });
+  if(btnCreate) btnCreate.addEventListener('click', ()=>{ try{ startMultiStep1(); } catch(e){ cqErr('startMultiStep1:', e); alert('Erreur : '+e.message); } });
 }
 
 // ══════════════════════════════════════════════════════
@@ -3108,8 +3116,7 @@ function startMultiStep1(){
   renderStep1();
 }
 function renderStep1(){
-  console.log('[CQ] renderStep1 — MULTI_ALL_FIELDS:', Array.isArray(MULTI_ALL_FIELDS) ? MULTI_ALL_FIELDS.length + ' items' : String(MULTI_ALL_FIELDS));
-  console.log('[CQ] multiLevel:', multiLevel, '| multiFieldFilter:', JSON.stringify(multiFieldFilter));
+  cqLog('renderStep1 — MULTI_ALL_FIELDS:', Array.isArray(MULTI_ALL_FIELDS)?MULTI_ALL_FIELDS.length+' items':String(MULTI_ALL_FIELDS), '| niveau:', multiLevel, '| filtre:', JSON.stringify(multiFieldFilter||[]));
   const c = document.getElementById('multi-container');
   const items = plants.map(p=>`
     <div class="psel-item ${multiSelectedIds.has(p.id)?'selected':''}" onclick="togglePlantSel(${p.id},this)">
@@ -3157,7 +3164,7 @@ function renderStep1(){
     </button>`;
   multiStep='select';
   const btnGen = document.getElementById('btn-gen-questions');
-  if(btnGen) btnGen.addEventListener('click', ()=>{ try{ goToStep2(); } catch(e){ console.error('[ChloroQuiz] goToStep2 error:', e); alert('Erreur : '+e.message+'\n\nStack: '+e.stack?.split('\n').slice(0,3).join(' | ')); } });
+  if(btnGen) btnGen.addEventListener('click', ()=>{ try{ goToStep2(); } catch(e){ cqErr('goToStep2:', e); alert('Erreur : '+e.message); } });
 }
 function togglePlantSel(id, el){
   const item = el.classList.contains('psel-item') ? el : el.closest('.psel-item');
@@ -3170,7 +3177,7 @@ function selectAllPlants(sel){
   renderStep1();
 }
 function selectMultiLevel(n){
-  console.log('[CQ] selectMultiLevel('+n+') — MULTI_ALL_FIELDS:', Array.isArray(MULTI_ALL_FIELDS) ? MULTI_ALL_FIELDS.length + ' items' : String(MULTI_ALL_FIELDS));
+  cqLog('selectMultiLevel('+n+') — MULTI_ALL_FIELDS:', Array.isArray(MULTI_ALL_FIELDS)?MULTI_ALL_FIELDS.length+' items':String(MULTI_ALL_FIELDS));
   multiLevel=n;
   [1,2,3].forEach(i=>{
     const b=document.getElementById('mlc-'+i);
@@ -3417,6 +3424,7 @@ function loadPackForLaunch(i){
 //  ÉTAPE 3 — Lancement + lobby
 // ══════════════════════════════════════════════════════
 async function goToStep3(){
+  cqLog('goToStep3 — questions kept:', (multiQuestions||[]).filter(q=>q.status==='kept').length, '| niveau:', multiLevel, '| filtre:', JSON.stringify(multiFieldFilter||[]));
   const kept = multiQuestions.filter(q=>q.status==='kept');
   const valid = kept.length>=10 ? kept : multiQuestions; // fallback si < 10 gardées
   if(valid.length<4){ alert('⚠️ Il faut au moins 4 questions pour lancer.'); return; }
@@ -3639,6 +3647,7 @@ function showSessionWaitRoom(code, playerName, questions){
   }, 2000);
 }
 function startSessionQuiz(code, playerName, questions, level){
+  cqLog('startSessionQuiz — code:', code, '| joueur:', playerName, '| questions:', questions.length);
   sessionPlayerName = playerName;
   sessionQIdx = 0;
   sessionQuestions = questions;
@@ -3682,6 +3691,7 @@ function renderSessionQuestion(code){
   pollSessionLb(code);
 }
 async function pickSessionAnswer(btn, answer, code){
+  cqLog('pickSessionAnswer — Q:', sessionQIdx+1, '| réponse:', answer);
   if(btn.disabled) return;
   stopTimer();
   const q = sessionQuestions[sessionQIdx];
