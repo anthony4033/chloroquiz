@@ -2736,7 +2736,7 @@ async function savePlantForm(){
 // ══════════════════════════════════════════════════════
 //  TEMP PICKER (Rusticité)
 // ══════════════════════════════════════════════════════
-const TEMPERATURES = (()=>{
+var TEMPERATURES = (()=>{
   const t = ['< -30°C', '-30 / -25°C', '-25 / -20°C', '-20 / -15°C'];
   for(let i=-14; i<=10; i++) t.push((i>0?'+':'')+i+'°C');
   return t;
@@ -2810,7 +2810,7 @@ function clickTempBtn(fieldId, idx){
 // ══════════════════════════════════════════════════════
 //  SIZE PICKER (Hauteur / Largeur)
 // ══════════════════════════════════════════════════════
-const TAILLES = (()=>{
+var TAILLES = (()=>{
   const t = ['<0.1 m'];
   for(let i=1;i<=20;i++) t.push((i/10).toFixed(1)+' m');
   for(let i=3;i<=40;i++) t.push(i+' m');
@@ -2923,7 +2923,7 @@ function updateSizePicker(fieldId){
 // ══════════════════════════════════════════════════════
 //  COLOR PICKER (Couleur des fleurs)
 // ══════════════════════════════════════════════════════
-const COULEURS_FLEURS = [
+var COULEURS_FLEURS = [
   // Blancs & Crèmes
   {nom:'Blanc',             css:'#ffffff'},
   {nom:'Crème',             css:'#f5e6c8'},
