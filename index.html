@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
+  <meta name="app-version" content="2026-03-13-v5"/>
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="ChloroQuiz">
@@ -1477,8 +1478,8 @@ function renderHome(){
 // ══════════════════════════════════════════════════════
 //  UTILS
 // ══════════════════════════════════════════════════════
-const shuffle=a=>[...a].sort(()=>Math.random()-.5);
-const rand=a=>a[Math.floor(Math.random()*a.length)];
+function shuffle(a){return [...a].sort(()=>Math.random()-.5);}
+function rand(a){return a[Math.floor(Math.random()*a.length)];}
 const nextId=()=>Math.max(0,...plants.map(p=>p.id))+1;
 function fmtDate(ts){
   return new Date(ts).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'});
@@ -3476,7 +3477,7 @@ async function confirmJoinSession(code){
     await sbPost('floralab_session_players',{
       session_code:code, player_name:fullName,
       score:0, total:0, current_q:0, done:false
-    },'resolution=merge-duplicates');
+    },'resolution=merge-duplicates&on_conflict=session_code,player_name');
     // Si session en attente, attendre le démarrage
     if(session.status==='waiting'){
       showSessionWaitRoom(code, fullName, session.questions);
@@ -3565,7 +3566,7 @@ async function pickSessionAnswer(btn, answer, code){
   document.querySelectorAll('.qopt').forEach(b=>{ b.disabled=true; if(b.textContent.trim()===q.correct) b.classList.add('correct'); else if(b===btn&&!ok) b.classList.add('wrong'); });
   // Mettre à jour score dans Supabase
   sessionQIdx++;
-  try{ await sbPost('floralab_session_players',{session_code:code,player_name:sessionPlayerName,score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length},'resolution=merge-duplicates'); }catch(e){}
+  try{ await sbPost('floralab_session_players',{session_code:code,player_name:sessionPlayerName,score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length},'resolution=merge-duplicates&on_conflict=session_code,player_name'); }catch(e){}
   // Bouton suivant
   const nextBtn = document.createElement('button');
   nextBtn.className='next-btn'; nextBtn.textContent = sessionQIdx>=sessionQuestions.length ? 'Voir les résultats →' : 'Question suivante →';
@@ -3574,7 +3575,7 @@ async function pickSessionAnswer(btn, answer, code){
 }
 function onSessionTimeout(code){
   stopTimer(); sessionScore.total++; sessionQIdx++;
-  try{ sbPost('floralab_session_players',{session_code:code,player_name:sessionPlayerName,score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length},'resolution=merge-duplicates'); }catch(e){}
+  try{ sbPost('floralab_session_players',{session_code:code,player_name:sessionPlayerName,score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length},'resolution=merge-duplicates&on_conflict=session_code,player_name'); }catch(e){}
   renderSessionQuestion(code);
 }
 async function pollSessionLb(code){
@@ -3726,7 +3727,7 @@ if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         const currentFile = window.location.pathname.split("/").pop() || './';
         const swCode = `
-          const CACHE = 'chloroquiz-v4';
+          const CACHE = 'chloroquiz-v5';
           self.addEventListener('install', e => {
             e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './' + currentFile])));
             self.skipWaiting();
