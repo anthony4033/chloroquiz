@@ -3465,7 +3465,7 @@ async function goToStep3(){
   } catch(e){ alert('❌ Erreur lors de la création de la session.\n'+e.message); return; }
   startSessionLobby(code);
 }
-function startSessionLobby(code){
+async function startSessionLobby(code){
   const c = document.getElementById('multi-container');
   c.innerHTML=`
     <div class="multi-step-title">🚀 Session en attente</div>
@@ -3521,7 +3521,7 @@ async function cancelSession(){
   }
   renderMultiTab();
 }
-function renderSessionMonitor(code){
+async function renderSessionMonitor(code){
   if(multiPollInterval) clearInterval(multiPollInterval);
   const c = document.getElementById('multi-container');
   c.innerHTML=`
@@ -3583,7 +3583,7 @@ async function joinSession(){
     showJoinNamePrompt(code, session);
   } catch(e){ alert('Erreur de connexion : '+e.message); }
 }
-function showJoinNamePrompt(code, session){
+async function showJoinNamePrompt(code, session){
   const root = document.getElementById('overlay-root');
   root.innerHTML=`
     <div class="form-bg" onclick="if(event.target===this)this.innerHTML=''">
@@ -3636,7 +3636,7 @@ async function confirmJoinSession(code){
     }
   } catch(e){ alert('Erreur : '+e.message); }
 }
-function showSessionWaitRoom(code, playerName, questions){
+async function showSessionWaitRoom(code, playerName, questions){
   const c = document.getElementById('quiz-container');
   showPage('quiz'); // aller sur la page quiz
   c.innerHTML=`
@@ -3673,7 +3673,7 @@ function startSessionQuiz(code, playerName, questions, level){
   showPage('quiz');
   renderSessionQuestion(code);
 }
-function renderSessionQuestion(code){
+async function renderSessionQuestion(code){
   const c = document.getElementById('quiz-container');
   if(sessionQIdx >= sessionQuestions.length){
     renderSessionEnd(code); return;
@@ -3725,7 +3725,7 @@ async function pickSessionAnswer(btn, answer, code){
   nextBtn.onclick = ()=>renderSessionQuestion(code);
   document.querySelector('.qbody').appendChild(nextBtn);
 }
-function onSessionTimeout(code){
+async function onSessionTimeout(code){
   stopTimer(); sessionScore.total++; sessionQIdx++;
   try{ sbPost('floralab_session_players',{session_code:code,player_name:sessionPlayerName,score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length},'resolution=merge-duplicates&on_conflict=session_code,player_name'); }catch(e){}
   renderSessionQuestion(code);
