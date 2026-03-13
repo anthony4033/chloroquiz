@@ -2963,21 +2963,20 @@ async function mergePlants(){
 // ══════════════════════════════════════════════════════
 //  MULTIJOUEUR — constantes & état
 // ══════════════════════════════════════════════════════
-const SK_PACKS = 'chloroquiz_packs';
-let multiStep = 'select';     // select | review | launch | monitor
-let multiSelectedIds = new Set();
-let multiLevel = 1;
-let multiQuestions = [];      // questions générées
-let multiReviewIdx = 0;       // index question en cours de review
-let multiSessionCode = null;
-let multiPollInterval = null;
-let sessionPlayers = [];      // [{name, score, done, q}] mis à jour par poll
-// Session joueur (côté apprenti)
-let sessionPlayerName = null;
-let sessionQIdx = 0;
-let sessionQuestions = [];
-let sessionScore = {ok:0,total:0};
-let sessionPollI = null;
+var SK_PACKS = 'chloroquiz_packs';
+var multiStep = 'select';
+var multiSelectedIds = new Set();
+var multiLevel = 1;
+var multiQuestions = [];
+var multiReviewIdx = 0;
+var multiSessionCode = null;
+var multiPollInterval = null;
+var sessionPlayers = [];
+var sessionPlayerName = null;
+var sessionQIdx = 0;
+var sessionQuestions = [];
+var sessionScore = {ok:0,total:0};
+var sessionPollI = null;
 
 // ══════════════════════════════════════════════════════
 //  ADMIN — onglet Multi : rendu principal
@@ -3717,16 +3716,33 @@ function exportMonitorCSV(){
   </div>
 
   <script>
-    if ('serviceWorker' in navigator) {
+    // Désinscrire les anciens Service Workers
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(reg => reg.unregister());
+  });
+}
+if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         const currentFile = window.location.pathname.split("/").pop() || './';
         const swCode = `
-          const CACHE = 'chloroquiz-v1';
+          const CACHE = 'chloroquiz-v4';
           self.addEventListener('install', e => {
             e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './' + currentFile])));
+            self.skipWaiting();
+          });
+          self.addEventListener('activate', e => {
+            e.waitUntil(caches.keys().then(keys => Promise.all(
+              keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+            )));
+            self.clients.claim();
           });
           self.addEventListener('fetch', e => {
-            e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+            if(e.request.mode === 'navigate'){
+              e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+            } else {
+              e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+            }
           });
         `;
         const blob = new Blob([swCode], {type: 'application/javascript'});
