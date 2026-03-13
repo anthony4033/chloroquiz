@@ -851,6 +851,8 @@ const CQ_DEBUG = false; // passer à true pour activer les logs de diagnostic
 function cqLog(...a){ if(CQ_DEBUG) console.log('[CQ]', ...a); }
 function cqWarn(...a){ if(CQ_DEBUG) console.warn('[CQ]', ...a); }
 function cqErr(...a){ console.error('[CQ]', ...a); } // erreurs toujours visibles
+// Log de boot — toujours visible pour confirmer la version chargée
+console.log('[ChloroQuiz] Script chargé — openForm disponible:', typeof openForm);
 
 // ══════════════════════════════════════════════════════
 //  CONSTANTES
@@ -2529,6 +2531,7 @@ async function deletePlant(id){
 //  FORM
 // ══════════════════════════════════════════════════════
 function openForm(id){
+  cqLog('openForm appelé, id=', id, '| overlay-root:', !!document.getElementById('overlay-root'));
   editingId=id; formPhotoB64=null; formPhoto2B64=null;
   const p=id?plants.find(x=>x.id==id):{}; // == pour tolérer number/string
   const v=k=>p[k]||'';
