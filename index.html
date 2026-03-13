@@ -860,6 +860,9 @@ console.log('[ChloroQuiz] Script chargé — openForm disponible:', typeof openF
 // Mots de passe — remplacés par les valeurs sauvegardées si elles existent
 let PW_USER  = 'flora2024';
 let PW_ADMIN = 'admin2024';
+// Initialisations pickers (avant openForm pour éviter TDZ)
+var tempPickerVal = {};
+var sizePickers   = {};
 const PW_DEFAULTS = {user:'flora2024', admin:'admin2024'};
 const SK_PLANTS  = 'chloroquiz_v3';
 const SK_SCORES  = 'chloroquiz_scores_v1';
@@ -2766,7 +2769,7 @@ function tempColor(idx){
   }
 }
 
-var tempPickerVal = {};
+
 
 function renderTempPicker(fieldId, currentVal){
   tempPickerVal[fieldId] = currentVal || '';
@@ -2818,7 +2821,7 @@ var TAILLES = (()=>{
   return t;
 })();
 // sizePickers[fieldId] = {min: idx|null, max: idx|null}
-var sizePickers = {};
+
 
 function parseSizeToIdx(str){
   if(!str) return null;
