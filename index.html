@@ -863,6 +863,75 @@ let PW_ADMIN = 'admin2024';
 // Initialisations pickers (avant openForm pour éviter TDZ)
 var tempPickerVal = {};
 var sizePickers   = {};
+var TEMPERATURES = (()=>{
+  const t = ['< -30°C', '-30 / -25°C', '-25 / -20°C', '-20 / -15°C'];
+  for(let i=-14; i<=10; i++) t.push((i>0?'+':'')+i+'°C');
+  return t;
+})();
+var TAILLES = (()=>{
+  const t = ['<0.1 m'];
+  for(let i=1;i<=20;i++) t.push((i/10).toFixed(1)+' m');
+  for(let i=3;i<=40;i++) t.push(i+' m');
+  t.push('>40 m');
+  return t;
+})();
+var COULEURS_FLEURS = [
+  // Blancs & Crèmes
+  {nom:'Blanc',             css:'#ffffff'},
+  {nom:'Crème',             css:'#f5e6c8'},
+  {nom:'Ivoire',            css:'#fffff0'},
+  // Jaunes & Verts
+  {nom:'Jaune pâle',        css:'#f5f0a0'},
+  {nom:'Jaune',             css:'#f5e020'},
+  {nom:'Jaune-vert',        css:'linear-gradient(135deg,#c8e020,#6abf30)'},
+  {nom:'Vert',              css:'#4caf50'},
+  // Oranges
+  {nom:'Abricot',           css:'#ffb347'},
+  {nom:'Saumon',            css:'#fa8072'},
+  {nom:'Orange',            css:'#ff8c00'},
+  // Roses
+  {nom:'Rose pâle',         css:'#ffb6c1'},
+  {nom:'Rose',              css:'#ff69b4'},
+  {nom:'Rose vif',          css:'#ff1493'},
+  {nom:'Magenta',           css:'#cc0077'},
+  // Rouges
+  {nom:'Rouge',             css:'#e02020'},
+  {nom:'Rouge vif',         css:'#ff0000'},
+  {nom:'Carmin',            css:'#960018'},
+  {nom:'Bordeaux',          css:'#722f37'},
+  // Violets & Bleus
+  {nom:'Mauve',             css:'#c8a0e0'},
+  {nom:'Lilas',             css:'#b0a0d0'},
+  {nom:'Lavande',           css:'#9070c0'},
+  {nom:'Violet',            css:'#6a0dad'},
+  {nom:'Violet foncé',      css:'#4b0082'},
+  {nom:'Pourpre',           css:'#800020'},
+  {nom:'Bleu ciel',         css:'#87ceeb'},
+  {nom:'Bleu',              css:'#2060c8'},
+  {nom:'Bleu foncé',        css:'#00008b'},
+  {nom:'Indigo',            css:'#3f0090'},
+  // Bruns & Spéciaux
+  {nom:'Brun',              css:'#8b4513'},
+  {nom:'Bronze',            css:'#cd7f32'},
+  {nom:'Noir',              css:'#1a1a2e'},
+  // Bicolores
+  {nom:'Blanc & Rose',      css:'linear-gradient(135deg,#fff 50%,#ff69b4 50%)'},
+  {nom:'Blanc & Rouge',     css:'linear-gradient(135deg,#fff 50%,#e02020 50%)'},
+  {nom:'Blanc & Violet',    css:'linear-gradient(135deg,#fff 50%,#6a0dad 50%)'},
+  {nom:'Blanc & Jaune',     css:'linear-gradient(135deg,#fff 50%,#f5e020 50%)'},
+  {nom:'Blanc & Bleu',      css:'linear-gradient(135deg,#fff 50%,#2060c8 50%)'},
+  {nom:'Rose & Rouge',      css:'linear-gradient(135deg,#ff69b4 50%,#e02020 50%)'},
+  {nom:'Rose & Blanc',      css:'linear-gradient(135deg,#ff69b4 50%,#fff 50%)'},
+  {nom:'Rose & Jaune',      css:'linear-gradient(135deg,#ff69b4 50%,#f5e020 50%)'},
+  {nom:'Rouge & Jaune',     css:'linear-gradient(135deg,#e02020 50%,#f5e020 50%)'},
+  {nom:'Jaune & Orange',    css:'linear-gradient(135deg,#f5e020 50%,#ff8c00 50%)'},
+  {nom:'Orange & Rouge',    css:'linear-gradient(135deg,#ff8c00 50%,#e02020 50%)'},
+  {nom:'Violet & Blanc',    css:'linear-gradient(135deg,#6a0dad 50%,#fff 50%)'},
+  {nom:'Violet & Jaune',    css:'linear-gradient(135deg,#6a0dad 50%,#f5e020 50%)'},
+  {nom:'Violet & Rose',     css:'linear-gradient(135deg,#6a0dad 50%,#ff69b4 50%)'},
+  {nom:'Bleu & Blanc',      css:'linear-gradient(135deg,#2060c8 50%,#fff 50%)'},
+  {nom:'Bleu & Jaune',      css:'linear-gradient(135deg,#2060c8 50%,#f5e020 50%)'},
+];
 const PW_DEFAULTS = {user:'flora2024', admin:'admin2024'};
 const SK_PLANTS  = 'chloroquiz_v3';
 const SK_SCORES  = 'chloroquiz_scores_v1';
@@ -2739,11 +2808,6 @@ async function savePlantForm(){
 // ══════════════════════════════════════════════════════
 //  TEMP PICKER (Rusticité)
 // ══════════════════════════════════════════════════════
-var TEMPERATURES = (()=>{
-  const t = ['< -30°C', '-30 / -25°C', '-25 / -20°C', '-20 / -15°C'];
-  for(let i=-14; i<=10; i++) t.push((i>0?'+':'')+i+'°C');
-  return t;
-})();
 
 // Color gradient: deep blue (very cold) → cyan → green → yellow → orange (warm)
 function tempColor(idx){
@@ -2813,13 +2877,6 @@ function clickTempBtn(fieldId, idx){
 // ══════════════════════════════════════════════════════
 //  SIZE PICKER (Hauteur / Largeur)
 // ══════════════════════════════════════════════════════
-var TAILLES = (()=>{
-  const t = ['<0.1 m'];
-  for(let i=1;i<=20;i++) t.push((i/10).toFixed(1)+' m');
-  for(let i=3;i<=40;i++) t.push(i+' m');
-  t.push('>40 m');
-  return t;
-})();
 // sizePickers[fieldId] = {min: idx|null, max: idx|null}
 
 
@@ -2926,63 +2983,6 @@ function updateSizePicker(fieldId){
 // ══════════════════════════════════════════════════════
 //  COLOR PICKER (Couleur des fleurs)
 // ══════════════════════════════════════════════════════
-var COULEURS_FLEURS = [
-  // Blancs & Crèmes
-  {nom:'Blanc',             css:'#ffffff'},
-  {nom:'Crème',             css:'#f5e6c8'},
-  {nom:'Ivoire',            css:'#fffff0'},
-  // Jaunes & Verts
-  {nom:'Jaune pâle',        css:'#f5f0a0'},
-  {nom:'Jaune',             css:'#f5e020'},
-  {nom:'Jaune-vert',        css:'linear-gradient(135deg,#c8e020,#6abf30)'},
-  {nom:'Vert',              css:'#4caf50'},
-  // Oranges
-  {nom:'Abricot',           css:'#ffb347'},
-  {nom:'Saumon',            css:'#fa8072'},
-  {nom:'Orange',            css:'#ff8c00'},
-  // Roses
-  {nom:'Rose pâle',         css:'#ffb6c1'},
-  {nom:'Rose',              css:'#ff69b4'},
-  {nom:'Rose vif',          css:'#ff1493'},
-  {nom:'Magenta',           css:'#cc0077'},
-  // Rouges
-  {nom:'Rouge',             css:'#e02020'},
-  {nom:'Rouge vif',         css:'#ff0000'},
-  {nom:'Carmin',            css:'#960018'},
-  {nom:'Bordeaux',          css:'#722f37'},
-  // Violets & Bleus
-  {nom:'Mauve',             css:'#c8a0e0'},
-  {nom:'Lilas',             css:'#b0a0d0'},
-  {nom:'Lavande',           css:'#9070c0'},
-  {nom:'Violet',            css:'#6a0dad'},
-  {nom:'Violet foncé',      css:'#4b0082'},
-  {nom:'Pourpre',           css:'#800020'},
-  {nom:'Bleu ciel',         css:'#87ceeb'},
-  {nom:'Bleu',              css:'#2060c8'},
-  {nom:'Bleu foncé',        css:'#00008b'},
-  {nom:'Indigo',            css:'#3f0090'},
-  // Bruns & Spéciaux
-  {nom:'Brun',              css:'#8b4513'},
-  {nom:'Bronze',            css:'#cd7f32'},
-  {nom:'Noir',              css:'#1a1a2e'},
-  // Bicolores
-  {nom:'Blanc & Rose',      css:'linear-gradient(135deg,#fff 50%,#ff69b4 50%)'},
-  {nom:'Blanc & Rouge',     css:'linear-gradient(135deg,#fff 50%,#e02020 50%)'},
-  {nom:'Blanc & Violet',    css:'linear-gradient(135deg,#fff 50%,#6a0dad 50%)'},
-  {nom:'Blanc & Jaune',     css:'linear-gradient(135deg,#fff 50%,#f5e020 50%)'},
-  {nom:'Blanc & Bleu',      css:'linear-gradient(135deg,#fff 50%,#2060c8 50%)'},
-  {nom:'Rose & Rouge',      css:'linear-gradient(135deg,#ff69b4 50%,#e02020 50%)'},
-  {nom:'Rose & Blanc',      css:'linear-gradient(135deg,#ff69b4 50%,#fff 50%)'},
-  {nom:'Rose & Jaune',      css:'linear-gradient(135deg,#ff69b4 50%,#f5e020 50%)'},
-  {nom:'Rouge & Jaune',     css:'linear-gradient(135deg,#e02020 50%,#f5e020 50%)'},
-  {nom:'Jaune & Orange',    css:'linear-gradient(135deg,#f5e020 50%,#ff8c00 50%)'},
-  {nom:'Orange & Rouge',    css:'linear-gradient(135deg,#ff8c00 50%,#e02020 50%)'},
-  {nom:'Violet & Blanc',    css:'linear-gradient(135deg,#6a0dad 50%,#fff 50%)'},
-  {nom:'Violet & Jaune',    css:'linear-gradient(135deg,#6a0dad 50%,#f5e020 50%)'},
-  {nom:'Violet & Rose',     css:'linear-gradient(135deg,#6a0dad 50%,#ff69b4 50%)'},
-  {nom:'Bleu & Blanc',      css:'linear-gradient(135deg,#2060c8 50%,#fff 50%)'},
-  {nom:'Bleu & Jaune',      css:'linear-gradient(135deg,#2060c8 50%,#f5e020 50%)'},
-];
 
 function renderColorPicker(fieldId, currentVal){
   const sel = new Set((currentVal||'').split(/\s*,\s*/).map(s=>s.trim()).filter(Boolean));
