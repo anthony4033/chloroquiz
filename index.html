@@ -3077,6 +3077,7 @@ var sessionQIdx = 0;
 var sessionQuestions = [];
 var sessionScore = {ok:0,total:0};
 var sessionPollI = null;
+var sessionFinalRows = []; // résultats finaux côté joueur
 
 // ══════════════════════════════════════════════════════
 //  ADMIN — onglet Multi : rendu principal
@@ -3559,16 +3560,31 @@ async function pollMonitor(code){
 }
 async function endSessionAdmin(){
   if(multiPollInterval){ clearInterval(multiPollInterval); multiPollInterval=null; }
+  const code = multiSessionCode || '—';
   if(multiSessionCode){
     try{ await sbPost('floralab_sessions',{code:multiSessionCode,status:'ended'},'resolution=merge-duplicates'); }catch(e){}
+    try{ sessionPlayers = await sbGet('floralab_session_players',`session_code=eq.${multiSessionCode}&select=*&order=score.desc`); }catch(e){}
     multiSessionCode=null;
   }
-  renderMultiTab();
+  const c = document.getElementById('multi-container');
+  c.innerHTML=`
+    <div class="multi-step-title">🏆 Résultats finaux — Session ${code}</div>
+    <div class="session-players-list" style="max-height:none;margin-bottom:16px">
+      ${sessionPlayers.map((r,i)=>`
+        <div class="session-player-row">
+          <span style="width:28px;font-size:18px">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.'}</span>
+          <span class="session-player-name">${r.player_name}</span>
+          <span class="session-player-score">✅ ${r.score||0}/${r.total||0}</span>
+          <span style="font-size:12px;color:rgba(200,223,204,.5)">${r.total?Math.round((r.score||0)/r.total*100):0}%</span>
+          <span class="session-player-prog">${r.done?'✅ Fini':'⏳'}</span>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button style="flex:1;min-width:140px;padding:12px;background:rgba(74,184,112,.1);border:1px solid rgba(74,184,112,.3);border-radius:12px;color:var(--g4);font-size:13px;font-weight:700;cursor:pointer" onclick="printMonitorResults()">🖨️ Imprimer</button>
+      <button style="flex:1;min-width:140px;padding:12px;background:rgba(32,96,200,.1);border:1px solid rgba(32,96,200,.3);border-radius:12px;color:#7ab8f5;font-size:13px;font-weight:700;cursor:pointer" onclick="exportMonitorCSV()">📥 Exporter CSV</button>
+      <button style="flex:1;min-width:140px;padding:12px;background:rgba(74,184,112,.15);border:1px solid rgba(74,184,112,.2);border-radius:12px;color:var(--g4);font-size:13px;font-weight:700;cursor:pointer" onclick="renderMultiTab()">← Nouvelle session</button>
+    </div>`;
 }
-
-// ══════════════════════════════════════════════════════
-//  CÔTÉ JOUEUR — Rejoindre une session
-// ══════════════════════════════════════════════════════
 async function joinSession(){
   const codeInput = document.getElementById('join-code-input');
   const code = (codeInput?.value||'').trim();
@@ -3748,8 +3764,8 @@ async function renderSessionEnd(code){
   stopTimer();
   if(sessionPollI){clearInterval(sessionPollI);sessionPollI=null;}
   const c = document.getElementById('quiz-container');
-  let rows = [];
-  try{ rows = await sbGet('floralab_session_players',`session_code=eq.${code}&select=*&order=score.desc`); }catch(e){}
+  try{ sessionFinalRows = await sbGet('floralab_session_players',`session_code=eq.${code}&select=*&order=score.desc`); }catch(e){ sessionFinalRows=[]; }
+  const rows = sessionFinalRows;
   const myRank = rows.findIndex(r=>r.player_name===sessionPlayerName)+1;
   const pct = sessionScore.total ? Math.round(sessionScore.ok/sessionScore.total*100) : 0;
   c.innerHTML=`
@@ -3760,26 +3776,20 @@ async function renderSessionEnd(code){
       <div style="font-size:13px;color:rgba(200,223,204,.35);margin-bottom:16px">🏆 Classement final — Session ${code}</div>
       <div class="session-players-list" style="max-height:none">
         ${rows.map((r,i)=>`
-          <div class="session-player-row ${r.player_name===sessionPlayerName?'':''}">
-            <span style="width:28px;font-size:18px">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1+'.'}</span>
-            <span class="session-player-name">${r.player_name}</span>
+          <div class="session-player-row" style="${r.player_name===sessionPlayerName?'background:rgba(74,184,112,.12);border-color:rgba(74,184,112,.3)':''}">
+            <span style="width:28px;font-size:18px">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.'}</span>
+            <span class="session-player-name">${r.player_name}${r.player_name===sessionPlayerName?' 👈':''}</span>
             <span class="session-player-score">✅ ${r.score||0}/${r.total||0}</span>
             <span style="font-size:12px;color:rgba(200,223,204,.4)">${r.total?Math.round((r.score||0)/r.total*100):0}%</span>
           </div>`).join('')}
       </div>
       <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;justify-content:center">
-        <button style="flex:1;min-width:140px;padding:12px 18px;background:rgba(74,184,112,.1);border:1px solid rgba(74,184,112,.3);border-radius:12px;color:var(--g4);font-size:13px;font-weight:700;cursor:pointer" onclick="printSessionResults('${code}',${JSON.stringify(rows).replace(/'/g,'\\'+'')},false)">🖨️ Imprimer les résultats</button>
-        <button style="flex:1;min-width:140px;padding:12px 18px;background:rgba(32,96,200,.1);border:1px solid rgba(32,96,200,.35);border-radius:12px;color:#7ab8f5;font-size:13px;font-weight:700;cursor:pointer" onclick="exportSessionCSV('${code}',${JSON.stringify(rows).replace(/'/g,'\\'+'')})">📥 Exporter CSV</button>
+        <button style="flex:1;min-width:140px;padding:12px 18px;background:rgba(74,184,112,.1);border:1px solid rgba(74,184,112,.3);border-radius:12px;color:var(--g4);font-size:13px;font-weight:700;cursor:pointer" onclick="printSessionResults('${code}',sessionFinalRows,false)">🖨️ Imprimer les résultats</button>
+        <button style="flex:1;min-width:140px;padding:12px 18px;background:rgba(32,96,200,.1);border:1px solid rgba(32,96,200,.35);border-radius:12px;color:#7ab8f5;font-size:13px;font-weight:700;cursor:pointer" onclick="exportSessionCSV('${code}',sessionFinalRows)">📥 Exporter CSV</button>
         <button style="flex:1;min-width:140px;padding:12px 18px;background:rgba(74,184,112,.1);border:1px solid rgba(74,184,112,.3);border-radius:12px;color:var(--g4);font-size:14px;font-weight:700;cursor:pointer" onclick="showPage('home')">← Accueil</button>
       </div>
     </div>`;
 }
-
-// ══════════════════════════════════════════════════════
-//  EXPORT / IMPRESSION — Sessions multijoueur
-// ══════════════════════════════════════════════════════
-
-// Impression classement final (côté joueur et formateur)
 function printSessionResults(code, rows, isAdmin){
   const date = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
   const title = `ChloroQuiz — Session ${code} · ${date}`;
