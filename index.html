@@ -224,7 +224,7 @@ html,body{min-height:100%;font-family:'DM Sans',sans-serif;background:#0b1e12;co
 /* ── Options étape 2 plus grandes ── */
 .k-opts .qopt{padding:10px 14px;font-size:15px;font-weight:600;border-radius:12px;line-height:1.25}
 @media(max-width:560px){.k-question-text{font-size:22px}.k-opts .qopt{font-size:16px;padding:14px 16px}}
-.qphoto-carousel{position:relative;width:100%;overflow:hidden;border-radius:0}.qphoto-track{display:flex;transition:transform .3s ease;will-change:transform}.qphoto-slide{min-width:100%;display:flex;align-items:center;justify-content:center;background:#0b1e12}.qphoto{width:100%;max-height:340px;object-fit:contain;display:block;background:#0b1e12}.qphoto-dots{display:flex;justify-content:center;gap:6px;padding:6px 0}.qphoto-dot{width:7px;height:7px;border-radius:50%;background:rgba(200,223,204,.25);transition:background .2s;cursor:pointer}.qphoto-dot.active{background:var(--g4)}
+.qphoto-carousel{position:relative;width:100%;overflow:hidden;border-radius:0;cursor:grab}.qphoto-track{display:flex;transition:transform .3s ease;will-change:transform}.qphoto-slide{min-width:100%;display:flex;align-items:center;justify-content:center;background:#0b1e12}.qphoto{width:100%;max-height:340px;object-fit:contain;display:block;background:#0b1e12}.qphoto-dots{display:flex;justify-content:center;gap:6px;padding:6px 0}.qphoto-dot{width:7px;height:7px;border-radius:50%;background:rgba(200,223,204,.25);transition:background .2s;cursor:pointer}.qphoto-dot.active{background:var(--g4)}
 .qphoto-fallback{width:100%;height:400px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e5030,#2d7a4a)}
 .qbody{padding:14px 16px}
 .phase-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--g4);margin-bottom:4px}
@@ -347,12 +347,12 @@ html,body{min-height:100%;font-family:'DM Sans',sans-serif;background:#0b1e12;co
 /* ══ MODAL ══ */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);z-index:200;
   display:flex;align-items:center;justify-content:center;padding:20px;animation:fl-fadein .2s ease}
-.modal{background:#0d2419;border:1px solid rgba(74,184,112,.25);border-radius:22px;padding:30px;
-  max-width:540px;width:100%;max-height:88vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(74,184,112,.3) transparent}
+.modal{background:#0d2419;border:1px solid rgba(74,184,112,.25);border-radius:22px;padding:0;
+  max-width:760px;width:100%;max-height:78vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(74,184,112,.3) transparent}
 .modal-close{float:right;background:rgba(255,100,100,.1);border:none;color:#ff7070;border-radius:8px;
   padding:5px 12px;cursor:pointer;font-size:18px;transition:background .2s}
 .modal-close:hover{background:rgba(255,100,100,.22)}
-.modal-img{width:100%;height:200px;object-fit:cover;border-radius:13px;margin:12px 0 16px;display:block}
+.modal-img{width:100%;height:200px;object-fit:cover;border-radius:13px;margin:12px 0 16px;display:block}.modal-img-full{width:100%;max-height:55vw;object-fit:cover;display:block}.mswipe-modal{padding:0;overflow:hidden;position:relative}.mswipe-track{display:flex;transition:transform .3s ease;will-change:transform;cursor:grab}.mswipe-track:active{cursor:grabbing}.mswipe-page{min-width:100%;box-sizing:border-box}.mswipe-dots{display:flex;justify-content:center;gap:8px;padding:8px 0 10px}.mswipe-dot{width:8px;height:8px;border-radius:50%;background:rgba(200,223,204,.2);cursor:pointer;transition:background .2s}.mswipe-dot.active{background:var(--g4)}
 .modal-img-fb{width:100%;height:200px;border-radius:13px;margin:12px 0 16px;background:linear-gradient(135deg,#1e5030,#2d7a4a);display:flex;align-items:center;justify-content:center}
 .modal-famille{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--g4);margin-bottom:3px}
 .modal-latin{font-family:var(--disp);font-size:26px;font-weight:900;font-style:italic;color:var(--cr)}
@@ -2009,7 +2009,16 @@ function initCarousel(){
   _carouselIdx = 0;
   var carousel = document.querySelector('.qphoto-carousel');
   if(!carousel) return;
-  var startX = 0, moved = false;
+  var startX = 0, moved = false, dragging = false;
+
+  function handleSwipe(dx){
+    var dots = document.querySelectorAll('.qphoto-dot');
+    if(Math.abs(dx) < 40 || dots.length < 2) return;
+    if(dx < 0 && _carouselIdx === 0) goSlide(1);
+    else if(dx > 0 && _carouselIdx === 1) goSlide(0);
+  }
+
+  // ── Touch (mobile) ──
   carousel.addEventListener('touchstart', function(e){
     startX = e.touches[0].clientX; moved = false;
   }, {passive:true});
@@ -2018,12 +2027,26 @@ function initCarousel(){
   }, {passive:true});
   carousel.addEventListener('touchend', function(e){
     if(!moved) return;
-    var dx = e.changedTouches[0].clientX - startX;
-    var dots = document.querySelectorAll('.qphoto-dot');
-    if(Math.abs(dx) < 40 || dots.length < 2) return;
-    if(dx < 0 && _carouselIdx === 0) goSlide(1);
-    else if(dx > 0 && _carouselIdx === 1) goSlide(0);
+    handleSwipe(e.changedTouches[0].clientX - startX);
   }, {passive:true});
+
+  // ── Souris (desktop) ──
+  carousel.addEventListener('mousedown', function(e){
+    startX = e.clientX; dragging = true; moved = false;
+    carousel.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e){
+    if(!dragging) return;
+    if(Math.abs(e.clientX - startX) > 5) moved = true;
+  });
+  document.addEventListener('mouseup', function(e){
+    if(!dragging) return;
+    dragging = false;
+    carousel.style.cursor = 'grab';
+    if(moved) handleSwipe(e.clientX - startX);
+  });
+  carousel.style.cursor = 'grab';
 }
 
 function photoBlockHTML(p){
@@ -2385,18 +2408,28 @@ function renderStats(){
   }));
   const collectiveList=Object.values(collective).sort((a,b)=>b.total-a.total).slice(0,10);
 
-  // Scores par apprenti
+  // Scores par apprenti — enrichis
   const byName={};
   scores.forEach(s=>{
     const n=s.name||'?';
-    if(!byName[n]) byName[n]={name:n,games:0,totalOk:0,totalQ:0,pctBest:0};
+    const lv=s.level||1;
+    if(!byName[n]) byName[n]={name:n,games:0,totalOk:0,totalQ:0,pctBest:0,pctWorst:100,levels:{},history:[],lastDate:0};
     byName[n].games++;
     byName[n].totalOk+=s.ok||0;
     byName[n].totalQ+=s.total||20;
     if(s.pct>byName[n].pctBest) byName[n].pctBest=s.pct;
+    if(s.pct<byName[n].pctWorst) byName[n].pctWorst=s.pct;
+    byName[n].levels[lv]=(byName[n].levels[lv]||0)+1;
+    if(s.date>byName[n].lastDate) byName[n].lastDate=s.date;
+    byName[n].history.push({pct:s.pct,date:s.date,lv});
   });
+  Object.values(byName).forEach(a=>a.history.sort((x,y)=>x.date-y.date));
 
-  const apprentis=Object.values(byName).sort((a,b)=>b.pctBest-a.pctBest);
+  // Moyenne de la classe
+  const allPcts=scores.map(s=>s.pct||0);
+  const classMoyenne=allPcts.length?Math.round(allPcts.reduce((a,b)=>a+b,0)/allPcts.length):0;
+
+  const apprentis=Object.values(byName).sort((a,b)=>b.totalOk-a.totalOk||b.pctBest-a.pctBest);
   const names=Object.keys(allErrors);
 
   const collectiveHTML=collectiveList.length?`
@@ -2413,17 +2446,47 @@ function renderStats(){
   const cardsHTML=apprentis.map(a=>{
     const pctGlobal=a.totalQ?Math.round(a.totalOk/a.totalQ*100):0;
     const myErrors=(allErrors[a.name]||[]).sort((x,y)=>y.count-x.count).slice(0,5);
+    const errCount=a.totalQ-a.totalOk;
+    const lvLabels={'1':'N1','2':'N2','3':'N3'};
+    const lvHTML=Object.entries(a.levels).map(([lv,n])=>`<span style="padding:2px 7px;border-radius:100px;font-size:10px;font-weight:700;background:rgba(74,184,112,.15);color:var(--g4);border:1px solid rgba(74,184,112,.3)">${lvLabels[lv]||'N'+lv} ×${n}</span>`).join(' ');
+    const hist=a.history;
+    var sparkHTML='';
+    if(hist.length>=2){
+      const W=80,H=24,pad=2;
+      const vals=hist.map(h=>h.pct);
+      const mn=Math.min(...vals),mx=Math.max(...vals)||1;
+      const pts=vals.map((v,i)=>{
+        const x=pad+(i/(vals.length-1))*(W-pad*2);
+        const y=H-pad-((v-mn)/(mx-mn||1))*(H-pad*2);
+        return x.toFixed(1)+','+y.toFixed(1);
+      }).join(' ');
+      const trend=vals[vals.length-1]-vals[0];
+      const trendCol=trend>0?'#4ab870':trend<0?'#ff9999':'#f5c540';
+      const trendArrow=trend>0?'↑':trend<0?'↓':'→';
+      sparkHTML=`<span style="display:inline-flex;align-items:center;gap:4px;vertical-align:middle"><svg width="${W}" height="${H}" style="vertical-align:middle"><polyline points="${pts}" fill="none" stroke="${trendCol}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><strong style="color:${trendCol};font-size:12px">${trendArrow}${Math.abs(trend)}%</strong></span>`;
+    }
+    const lastD=a.lastDate?new Date(a.lastDate).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):'—';
+    const barCol=pctGlobal>=70?'var(--g4)':pctGlobal>=50?'var(--am2)':'#ff9999';
     return `
       <div class="stat-card">
-        <div class="stat-card-name">${a.name}</div>
-        <div class="stat-card-sub">${a.games} partie(s) · meilleur score : <strong style="color:var(--am2)">${a.pctBest}%</strong></div>
-        <div style="font-size:11px;color:rgba(200,223,204,.4);margin-bottom:4px">Taux de réussite global : ${pctGlobal}%</div>
-        <div class="stat-bar-wrap"><div class="stat-bar" style="width:${pctGlobal}%"></div></div>
-        ${myErrors.length?`
-          <div class="stat-weak">
-            <div class="stat-weak-title">Points faibles</div>
-            ${myErrors.map(e=>`<div class="stat-weak-item"><em style="font-size:12px">${e.latin}</em><span class="stat-weak-count">${e.count}×</span></div>`).join('')}
-          </div>`:'<div style="font-size:11px;color:rgba(74,184,112,.4);margin-top:10px">✅ Aucune erreur enregistrée</div>'}
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="stat-card-name">${a.name}</div>
+          <div style="font-size:10px;color:rgba(200,223,204,.5);text-align:right">Dernière partie<br><strong style="color:rgba(200,223,204,.8)">${lastD}</strong></div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 8px">${lvHTML}</div>
+        <div style="font-size:11px;color:rgba(200,223,204,.7);margin-bottom:4px">
+          🎮 <strong>${a.games}</strong> partie(s) &nbsp;·&nbsp;
+          🏆 Meilleur : <strong style="color:var(--am2)">${a.pctBest}%</strong> &nbsp;·&nbsp;
+          📉 Pire : <strong style="color:#ff9999">${a.pctWorst}%</strong>
+        </div>
+        <div style="font-size:11px;color:rgba(200,223,204,.7);margin-bottom:6px">
+          ✅ <strong style="color:var(--g4)">${a.totalOk}</strong> pts &nbsp;·&nbsp;
+          ❌ <strong style="color:#ff9999">${errCount}</strong> erreurs &nbsp;·&nbsp;
+          <strong style="color:${barCol}">${pctGlobal}%</strong> global
+        </div>
+        <div class="stat-bar-wrap"><div class="stat-bar" style="width:${pctGlobal}%;background:${barCol}"></div></div>
+        ${hist.length>=2?`<div style="margin-top:8px;font-size:11px;color:rgba(200,223,204,.6)">Progression : ${sparkHTML}</div>`:''}
+        ${myErrors.length?`<div class="stat-weak"><div class="stat-weak-title">Points faibles</div>${myErrors.map(e=>`<div class="stat-weak-item"><em style="font-size:12px">${e.latin}</em><span class="stat-weak-count">${e.count}×</span></div>`).join('')}</div>`:''}
       </div>`;
   }).join('');
 
@@ -2431,7 +2494,7 @@ function renderStats(){
 
   c.innerHTML=`
     <div class="pg-title">📊 Statistiques <em>Apprentis</em></div>
-    <div class="pg-sub">Suivi de progression par apprenti — données locales de cet appareil</div>
+    <div class="pg-sub">Suivi de progression — ${apprentis.length} apprenti(s) · Moyenne classe : <strong style="color:var(--am2)">${classMoyenne}%</strong></div>
     ${collectiveHTML}
     ${apprentis.length?`<div class="stats-grid">${cardsHTML}</div>`:emptyHTML}
     ${names.length?`<button onclick="if(confirm('Effacer tout l\\'historique des erreurs ?')){ localStorage.removeItem('${SK_ERRORS}'); renderStats(); }"
@@ -2512,26 +2575,98 @@ function openModal(id){
   const p=plants.find(x=>x.id===id); if(!p)return;
   const KALL=[...KFIELDS_N2];
   const fields=KALL.filter(f=>p[f.key]).map(f=>`<div class="minfo"><div class="minfo-lbl">${f.label}</div><div class="minfo-val">${p[f.key]}</div></div>`).join('');
-  document.getElementById('overlay-root').innerHTML=`
-    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
-      <div class="modal">
-        <button class="modal-close" onclick="closeModal()">✕</button>
-        ${p.famille?`<div class="modal-famille">${p.famille}</div>`:''}
-        <div class="modal-latin">${p.latin}</div>
-        <div class="modal-common">${p.nom||''}${p.feuillage?` <span style="display:inline-block;padding:2px 10px;border-radius:100px;font-size:11px;background:rgba(100,160,255,.12);color:#a0c4ff;border:1px solid rgba(100,160,255,.2);margin-left:6px;font-family:'DM Sans',sans-serif">${p.feuillage==='Caduc'?'🍂':p.feuillage==='Persistant'?'🌿':'🍁'} ${p.feuillage}</span>`:''}</div>
-        ${p.photo&&p.photo2
-          ? `<div class="photo-grid" style="margin:12px 0 16px">
-               <img src="${p.photo}"  class="modal-img" style="margin:0;height:160px" onerror="this.style.display='none'" loading="lazy"/>
-               <img src="${p.photo2}" class="modal-img" style="margin:0;height:160px" onerror="this.style.display='none'" loading="lazy"/>
-             </div>`
-          : p.photo
-            ? `<img src="${p.photo}" class="modal-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy"/><div class="modal-img-fb" style="display:none">${LEAF_SVG}</div>`
-            : `<div class="modal-img-fb">${LEAF_SVG}</div>`
-        }
-        ${fields?`<div class="modal-grid">${fields}</div>`:''}
-        ${p.description?`<div class="modal-sec-title">Description</div><div class="modal-sec-text">${p.description}</div>`:''}
-      </div>
-    </div>`;
+  const photoHTML = p.photo
+    ? `<img src="${p.photo}" class="modal-img-full" onerror="this.style.display='none'" loading="lazy"/>`
+    + (p.photo2?`<img src="${p.photo2}" class="modal-img-full" style="margin-top:8px" onerror="this.style.display='none'" loading="lazy"/>`:'')
+    : `<div class="modal-img-fb">${LEAF_SVG}</div>`;
+
+  const isMobile = window.innerWidth <= 640;
+
+  if(isMobile){
+    // ── Mobile : 2 pages swipeables ──
+    const page1=`
+      <div class="mswipe-page">
+        <div style="padding:20px 20px 12px;position:relative">
+          <button class="modal-close" onclick="closeModal()">✕</button>
+          ${p.famille?`<div class="modal-famille">${p.famille}</div>`:''}
+          <div class="modal-latin">${p.latin}</div>
+          <div class="modal-common">${p.nom||''}${p.feuillage?` <span style="display:inline-block;padding:2px 10px;border-radius:100px;font-size:11px;background:rgba(100,160,255,.12);color:#a0c4ff;border:1px solid rgba(100,160,255,.2);margin-left:6px;font-family:'DM Sans',sans-serif">${p.feuillage==='Caduc'?'🍂':p.feuillage==='Persistant'?'🌿':'🍁'} ${p.feuillage}</span>`:''}</div>
+        </div>
+        <div>${photoHTML}</div>
+        <div style="text-align:center;padding:10px 0 6px;font-size:11px;color:rgba(200,223,204,.45)">Swiper pour les infos →</div>
+      </div>`;
+    const page2=`
+      <div class="mswipe-page" style="overflow-y:auto">
+        <div style="padding:16px 20px">
+          <button class="modal-close" onclick="closeModal()">✕</button>
+          ${p.famille?`<div class="modal-famille">${p.famille}</div>`:''}
+          <div class="modal-latin" style="font-size:18px;margin-bottom:12px">${p.latin}</div>
+          ${fields?`<div class="modal-grid">${fields}</div>`:'<div style="color:rgba(200,223,204,.4);font-size:13px">Aucune information disponible.</div>'}
+          ${p.description?`<div class="modal-sec-title" style="margin-top:12px">Description</div><div class="modal-sec-text">${p.description}</div>`:''}
+          <div style="text-align:center;padding:10px 0 4px;font-size:11px;color:rgba(200,223,204,.45)">← Swiper pour les photos</div>
+        </div>
+      </div>`;
+    document.getElementById('overlay-root').innerHTML=`
+      <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+        <div class="modal mswipe-modal">
+          <div class="mswipe-track" id="mswipe-track">${page1}${page2}</div>
+          <div class="mswipe-dots">
+            <span class="mswipe-dot active" onclick="goModalSlide(0)"></span>
+            <span class="mswipe-dot" onclick="goModalSlide(1)"></span>
+          </div>
+        </div>
+      </div>`;
+    initModalSwipe();
+  } else {
+    // ── Desktop : 1 seule page (layout original) ──
+    document.getElementById('overlay-root').innerHTML=`
+      <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+        <div class="modal">
+          <button class="modal-close" onclick="closeModal()">✕</button>
+          ${p.famille?`<div class="modal-famille">${p.famille}</div>`:''}
+          <div class="modal-latin">${p.latin}</div>
+          <div class="modal-common">${p.nom||''}${p.feuillage?` <span style="display:inline-block;padding:2px 10px;border-radius:100px;font-size:11px;background:rgba(100,160,255,.12);color:#a0c4ff;border:1px solid rgba(100,160,255,.2);margin-left:6px;font-family:'DM Sans',sans-serif">${p.feuillage==='Caduc'?'🍂':p.feuillage==='Persistant'?'🌿':'🍁'} ${p.feuillage}</span>`:''}</div>
+          ${p.photo&&p.photo2
+            ? `<div class="photo-grid" style="margin:12px 0 16px">
+                 <img src="${p.photo}"  class="modal-img" style="margin:0;height:200px" onerror="this.style.display='none'" loading="lazy"/>
+                 <img src="${p.photo2}" class="modal-img" style="margin:0;height:260px" onerror="this.style.display='none'" loading="lazy"/>
+               </div>`
+            : p.photo
+              ? `<img src="${p.photo}" class="modal-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy"/><div class="modal-img-fb" style="display:none">${LEAF_SVG}</div>`
+              : `<div class="modal-img-fb">${LEAF_SVG}</div>`
+          }
+          ${fields?`<div class="modal-grid">${fields}</div>`:''}
+          ${p.description?`<div class="modal-sec-title">Description</div><div class="modal-sec-text">${p.description}</div>`:''}
+        </div>
+      </div>`;
+  }
+}
+
+var _modalIdx=0;
+function goModalSlide(idx){
+  _modalIdx=idx;
+  var track=document.getElementById('mswipe-track');
+  if(track) track.style.transform='translateX(-'+idx*100+'%)';
+  document.querySelectorAll('.mswipe-dot').forEach(function(d,i){ d.classList.toggle('active',i===idx); });
+}
+function initModalSwipe(){
+  _modalIdx=0;
+  var track=document.getElementById('mswipe-track');
+  if(!track) return;
+  var startX=0, moved=false, dragging=false;
+  function handleSwipe(dx){
+    if(Math.abs(dx)<40) return;
+    if(dx<0 && _modalIdx===0) goModalSlide(1);
+    else if(dx>0 && _modalIdx===1) goModalSlide(0);
+  }
+  // Touch
+  track.addEventListener('touchstart',function(e){ startX=e.touches[0].clientX; moved=false; },{passive:true});
+  track.addEventListener('touchmove',function(e){ moved=true; },{passive:true});
+  track.addEventListener('touchend',function(e){ if(moved) handleSwipe(e.changedTouches[0].clientX-startX); },{passive:true});
+  // Souris
+  track.addEventListener('mousedown',function(e){ startX=e.clientX; dragging=true; moved=false; e.preventDefault(); });
+  document.addEventListener('mousemove',function(e){ if(dragging&&Math.abs(e.clientX-startX)>5) moved=true; });
+  document.addEventListener('mouseup',function(e){ if(!dragging)return; dragging=false; if(moved) handleSwipe(e.clientX-startX); });
 }
 function closeModal(){ document.getElementById('overlay-root').innerHTML=''; }
 
