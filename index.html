@@ -4243,7 +4243,17 @@ async function renderSessionQuestion(code){
   const q = sessionQuestions[sessionQIdx];
   const isPhoto = q.type==='photo' || q.type==='dictee';
   const isDictee = q.type==='dictee';
-  const photoHtml = (q.plantPhoto && (isPhoto||isDictee)) ? `<div class="qphotos one"><img src="${q.plantPhoto}" class="qphoto" onerror="this.style.display='none'" loading="lazy"/></div>` : '';
+  // Carrousel photos session (1 ou 2 photos) identique au quiz solo
+  var photoHtml = '';
+  if(q.plantPhoto && (isPhoto||isDictee)){
+    const has2sess = q.plantPhoto && q.plantPhoto2;
+    const slide1sess = `<div class="qphoto-slide"><img src="${q.plantPhoto}" class="qphoto" onerror="this.style.display='none'" loading="lazy"/></div>`;
+    const slide2sess = has2sess ? `<div class="qphoto-slide"><img src="${q.plantPhoto2}" class="qphoto" onerror="this.style.display='none'" loading="lazy"/></div>` : '';
+    const dotssess = has2sess ? `<div class="qphoto-dots"><span class="qphoto-dot active" onclick="goSlide(0)"></span><span class="qphoto-dot" onclick="goSlide(1)"></span></div>` : '';
+    photoHtml = `<div class="qphotos"><div class="qphoto-carousel" id="qpc-sess">`
+      +`<div class="qphoto-track">${slide1sess}${slide2sess}</div>`
+      +`</div>${dotssess}</div>`;
+  }
   // Dictée multi : champ texte
   const opts = isDictee
     ? (`<div class="dictee-wrap">`
@@ -4284,6 +4294,7 @@ async function renderSessionQuestion(code){
   startTimer(()=>onSessionTimeout(code), isDictee?60:TIMER_SEC);
   pollSessionLb(code);
   if(isDictee) setTimeout(()=>{ var el=document.getElementById('dictee-input'); if(el)el.focus(); },150);
+  setTimeout(initCarousel, 50);
 }
 async function pickSessionAnswer(btn, answer, code){
   cqLog('pickSessionAnswer — Q:', sessionQIdx+1, '| réponse:', answer);
