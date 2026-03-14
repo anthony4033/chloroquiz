@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-  <meta name="app-version" content="2026-03-13-v8"/>
+  <meta name="app-version" content="2026-03-14-v2"/>
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="ChloroQuiz">
@@ -632,6 +632,28 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
+  <script>
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("/chloroquiz/sw.js")
+        .then(function(reg){
+          console.log("[CQ] SW enregistré");
+          // Écouter les messages du SW (progression précache)
+          navigator.serviceWorker.addEventListener("message", function(e){
+            if(e.data && e.data.type==="photosCached"){
+              var d = e.data;
+              if(d.cached > 0){
+                console.log("[CQ] Photos cachées: "+d.cached+" nouvelles, "+d.skipped+" déjà en cache");
+              }
+              // Mettre à jour le statut hors-ligne si visible
+              updateOfflineStatus(d);
+            }
+          });
+        })
+        .catch(function(e){ console.warn("[CQ] SW échec:", e); });
+    });
+  }
+  </script>
   <meta name="theme-color" content="#4ab870">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1995,6 +2017,22 @@ function topbarHTML(){
 }
 
 
+// ── Service Worker : statut hors-ligne ──
+function updateOfflineStatus(data){
+  // Utiliser updateCloudDot() qui gère les vrais IDs cloud-dot / cloud-dot-label
+  if(!navigator.onLine){
+    var dot = document.getElementById('cloud-dot');
+    var lbl = document.getElementById('cloud-dot-label');
+    if(dot) dot.className='cloud-dot offline';
+    if(lbl) lbl.textContent='○ Hors ligne';
+  } else {
+    updateCloudDot();
+  }
+}
+window.addEventListener('online',  function(){ updateOfflineStatus(null); syncOfflineQueue(); });
+window.addEventListener('offline', function(){ updateOfflineStatus(null); });
+
+
 // ── Carrousel photos quiz ──
 var _carouselIdx = 0;
 function goSlide(idx){
@@ -2571,6 +2609,117 @@ function renderFiches(){
     </div>`).join('');
 }
 
+// ══════════════════════════════════════════════
+//  Export PDF — Fiche végétal
+// ══════════════════════════════════════════════
+function exportFichePDF(id){
+  const p = plants.find(x=>x.id===id);
+  if(!p) return;
+
+  // Tous les champs à afficher
+  const KALL_PDF = [
+    {key:'feuillage',        label:'Feuillage'},
+    {key:'rusticite',        label:'Rusticité'},
+    {key:'exposition',       label:'Exposition'},
+    {key:'ph',               label:'pH du sol'},
+    {key:'resistanceSech',   label:'Résistance sécheresse'},
+    {key:'hauteurAdulte',    label:'Hauteur adulte'},
+    {key:'largeurAdulte',    label:'Largeur adulte'},
+    {key:'periodeFloraison', label:'Période de floraison'},
+    {key:'couleurFleurs',    label:'Couleur des fleurs'},
+    {key:'famille',          label:'Famille botanique'},
+    {key:'type',             label:'Type végétal'},
+    {key:'interetOrnemental',label:'Intérêt ornemental'},
+    {key:'autresInterets',   label:'Autres intérêts'},
+    {key:'usageAmenagement', label:'Usage aménagement'},
+  ];
+
+  const fields = KALL_PDF.filter(f=>p[f.key]);
+  const fieldsHTML = fields.map(f=>
+    `<div class="field">
+      <div class="field-lbl">${f.label}</div>
+      <div class="field-val">${p[f.key]}</div>
+    </div>`
+  ).join('');
+
+  const photo1 = p.photo  ? `<img src="${p.photo}"  class="photo" onerror="this.style.display='none'"/>` : '';
+  const photo2 = p.photo2 ? `<img src="${p.photo2}" class="photo" onerror="this.style.display='none'"/>` : '';
+  const hasTwoPhotos = p.photo && p.photo2;
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<title>Fiche — ${p.latin}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #fff;
+    color: #1a2e20;
+    padding: 28px 32px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  /* En-tête */
+  .header { border-bottom: 3px solid #2d7a4a; padding-bottom: 14px; margin-bottom: 18px; }
+  .famille { font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: #4ab870; font-weight: 600; margin-bottom: 4px; }
+  .latin { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 900; font-style: italic; color: #1a2e20; line-height: 1.1; }
+  .nom { font-size: 15px; color: #4a6e52; margin-top: 4px; font-weight: 600; }
+  .logo { font-size: 11px; color: #999; margin-top: 6px; }
+  /* Photos */
+  .photos { display: flex; gap: 12px; margin-bottom: 18px; }
+  .photo { width: ${hasTwoPhotos ? '50%' : '100%'}; max-height: 240px; object-fit: cover; border-radius: 10px; border: 1px solid #d0e8d8; }
+  /* Grille champs */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .field { background: #f4faf6; border: 1px solid #cde8d4; border-radius: 8px; padding: 8px 12px; }
+  .field-lbl { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #6ea87a; margin-bottom: 3px; font-weight: 600; }
+  .field-val { font-size: 13px; color: #1a2e20; font-weight: 600; line-height: 1.35; }
+  /* Description */
+  .desc-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #4ab870; font-weight: 600; margin-bottom: 6px; margin-top: 4px; }
+  .desc-text { font-size: 13px; color: #2a4a30; line-height: 1.7; }
+  /* Footer */
+  .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #d0e8d8; font-size: 10px; color: #999; display: flex; justify-content: space-between; }
+  @media print {
+    body { padding: 16px 20px; }
+    @page { margin: 12mm 14mm; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    ${p.famille ? `<div class="famille">${p.famille}</div>` : ''}
+    <div class="latin">${p.latin}</div>
+    ${p.nom ? `<div class="nom">${p.nom}</div>` : ''}
+    <div class="logo">ChloroQuiz — Fiche végétal</div>
+  </div>
+  ${(p.photo||p.photo2) ? `<div class="photos">${photo1}${photo2}</div>` : ''}
+  <div class="grid">${fieldsHTML}</div>
+  ${p.description ? `<div class="desc-title">Description</div><div class="desc-text">${p.description}</div>` : ''}
+  <div class="footer">
+    <span>ChloroQuiz — CFA Le Teich</span>
+    <span>${new Date().toLocaleDateString('fr-FR')}</span>
+  </div>
+  <script>window.onload=function(){ window.print(); }<\/script>
+</body>
+</html>`;
+
+  // Ouvrir dans nouvelle fenêtre via Blob URL
+  try {
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    const url  = URL.createObjectURL(blob);
+    const win  = window.open(url, '_blank');
+    if(!win) alert('Autorisez les popups pour exporter la fiche en PDF.');
+    setTimeout(()=>URL.revokeObjectURL(url), 30000);
+  } catch(e) {
+    // Fallback direct
+    const win = window.open('', '_blank');
+    if(win){ win.document.write(html); win.document.close(); }
+  }
+}
+
+
 function openModal(id){
   const p=plants.find(x=>x.id===id); if(!p)return;
   // Tous les champs remplis — KFIELDS_N2 + type + usageAmenagement
@@ -2608,6 +2757,7 @@ function openModal(id){
           <div class="modal-latin" style="font-size:18px;margin-bottom:12px">${p.latin}</div>
           ${fields?`<div class="modal-grid">${fields}</div>`:'<div style="color:rgba(200,223,204,.4);font-size:13px">Aucune information disponible.</div>'}
           ${p.description?`<div class="modal-sec-title" style="margin-top:12px">Description</div><div class="modal-sec-text">${p.description}</div>`:''}
+          <div style="margin-top:14px;text-align:center"><button onclick="exportFichePDF(${p.id})" style="padding:9px 20px;background:rgba(232,160,32,.12);border:1px solid rgba(232,160,32,.35);border-radius:10px;color:var(--am2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">📄 Exporter PDF</button></div>
           <div style="text-align:center;padding:10px 0 4px;font-size:11px;color:rgba(200,223,204,.45)">← Swiper pour les photos</div>
         </div>
       </div>`;
@@ -2645,6 +2795,7 @@ function openModal(id){
           <div style="padding:0 28px 28px 28px">
           ${fields?`<div class="modal-grid">${fields}</div>`:''}
           ${p.description?`<div class="modal-sec-title">Description</div><div class="modal-sec-text">${p.description}</div>`:''}
+          <div style="margin-top:18px;text-align:right"><button onclick="exportFichePDF(${p.id})" style="padding:9px 20px;background:rgba(232,160,32,.12);border:1px solid rgba(232,160,32,.35);border-radius:10px;color:var(--am2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">📄 Exporter PDF</button></div>
           </div>
         </div>
       </div>`;
