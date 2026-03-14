@@ -1006,7 +1006,10 @@ alter table floralab_scores enable row level security;
 create policy "public_all_data" on floralab_data
   for all using (true) with check (true);
 create policy "public_all_scores" on floralab_scores
-  for all using (true) with check (true);`;
+  for all using (true) with check (true);
+
+-- Ajouter la colonne last_activity (a executer une seule fois dans Supabase) :
+-- alter table floralab_session_players add column if not exists last_activity text default null;`;
 
 const KFIELDS_N1 = [
   {key:'feuillage',        label:'Feuillage',             q:n=>`Quel est le type de feuillage de <em>${n}</em> ?`},
@@ -4050,21 +4053,47 @@ async function pollMonitor(code){
     const rows = await sbGet('floralab_session_players',`session_code=eq.${code}&select=*&order=score.desc`);
     const list = document.getElementById('monitor-list');
     const cnt = document.getElementById('monitor-count');
+    const progGlobal = document.getElementById('monitor-progress-global');
     if(!list) return;
     const done = rows.filter(r=>r.done).length;
+    const avgPct = rows.length ? Math.round(rows.reduce((a,r)=>a+(r.score||0),0)/rows.reduce((a,r)=>a+(r.total||1),0)*100) : 0;
     cnt.textContent = `${rows.length} joueur(s) · ${done} terminé(s)`;
-    list.innerHTML = rows.map((r,i)=>`
-      <div class="session-player-row">
-        <span style="width:24px;font-weight:700;color:${i===0?'#ffd700':i===1?'#c0c0c0':i===2?'#cd7f32':'rgba(200,223,204,.4)'}">${i+1}</span>
-        <span class="session-player-name">👤 ${r.player_name}</span>
-        <span class="session-player-score">✅ ${r.score||0}/${r.total||0}</span>
-        <span class="session-player-prog">${r.done?'✅ Fini':'Q'+(r.current_q||0)+'/20'}</span>
-      </div>`).join('');
+    if(progGlobal) progGlobal.textContent = rows.length>0 ? `Moyenne : ${avgPct}%` : '';
+    const medals = ['🥇','🥈','🥉'];
+    list.innerHTML = rows.map((r,i)=>{
+      var act = null;
+      try{ if(r.last_activity) act = JSON.parse(r.last_activity); }catch(e){}
+      const pct = r.total ? Math.round((r.score||0)/r.total*100) : 0;
+      const barCol = pct>=70?'var(--g4)':pct>=40?'var(--am2)':'#ff9999';
+      const rankIcon = i<3 ? medals[i] : `<span style="color:rgba(200,223,204,.4);font-weight:700">#${i+1}</span>`;
+      var statusHtml = '';
+      if(r.done){
+        statusHtml = `<span class="mon-status done">✅ Terminé · ${r.score||0}/${r.total||0} · ${pct}%</span>`;
+      } else if(act){
+        const okIcon = act.ok ? '✅' : '❌';
+        const plantShort = act.plant ? act.plant.split(' ').slice(0,2).join(' ') : '';
+        statusHtml = `<span class="mon-status ${act.ok?'ok':'ko'}">${okIcon} Q${act.q} · ${act.label||''} · <em>${plantShort}</em></span>`;
+      } else {
+        statusHtml = `<span class="mon-status wait">⏳ En attente…</span>`;
+      }
+      return `<div class="mon-row ${r.done?'mon-done':''}">
+        <div class="mon-rank">${rankIcon}</div>
+        <div class="mon-info">
+          <div class="mon-name">${r.player_name}</div>
+          <div class="mon-bar-wrap"><div class="mon-bar" style="width:${pct}%;background:${barCol}"></div></div>
+        </div>
+        <div class="mon-right">
+          <div class="mon-score">${r.score||0}<span style="font-size:11px;opacity:.5">/${r.total||0}</span></div>
+          <div class="mon-q">Q ${r.current_q||0}</div>
+        </div>
+        <div class="mon-activity">${statusHtml}</div>
+      </div>`;
+    }).join('');
     if(done===rows.length && rows.length>0){
       clearInterval(multiPollInterval);
-      cnt.textContent += ' — 🎉 Tous terminés !';
+      if(cnt) cnt.textContent += ' — 🎉 Tous terminés !';
     }
-  } catch(e){}
+  } catch(e){ cqErr('pollMonitor error:',e); }
 }
 async function endSessionAdmin(){
   if(multiPollInterval){ clearInterval(multiPollInterval); multiPollInterval=null; }
@@ -4390,7 +4419,7 @@ function printSessionResults(code, rows, isAdmin){
     +'td{padding:7px 8px;border:1px solid #ddd;vertical-align:middle}'
     +'.footer{margin-top:20px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:10px}'
     +'.print-btn{margin-top:16px;padding:10px 20px;background:#2d7a4a;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;display:block;width:100%}'
-    +'@media print{.print-btn{display:none}}#player-name-input::placeholder,#player-initial-input::placeholder{color:rgba(200,223,204,.55)}.dictee-wrap{display:flex;gap:8px;margin-bottom:8px}.dictee-input{flex:1;padding:12px 16px;background:rgba(19,48,29,.7);border:1px solid rgba(74,184,112,.3);border-radius:13px;color:var(--cr);font-size:17px;outline:none;transition:border-color .3s}.dictee-input:focus{border-color:var(--g4)}.dictee-btn{padding:12px 18px;background:var(--g3);border:none;border-radius:13px;color:white;font-size:18px;cursor:pointer;transition:background .2s}.dictee-btn:hover{background:var(--g4)}.dictee-toggle-wrap{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;padding:8px 14px;background:rgba(19,48,29,.4);border-radius:12px;border:1px solid rgba(74,184,112,.15)}.dictee-toggle-label{font-size:13px;color:rgba(200,223,204,.85);cursor:pointer}@media(max-width:640px){.modal{max-height:94vh}.modal-bg{padding:6px}}@media(min-width:641px){.minfo-lbl{font-size:11px}.minfo-val{font-size:14px}.modal-latin{font-size:28px}.modal-common{font-size:14px}.modal-famille{font-size:12px}}</style></head><body>'
+    +'@media print{.print-btn{display:none}}#player-name-input::placeholder,#player-initial-input::placeholder{color:rgba(200,223,204,.55)}.dictee-wrap{display:flex;gap:8px;margin-bottom:8px}.dictee-input{flex:1;padding:12px 16px;background:rgba(19,48,29,.7);border:1px solid rgba(74,184,112,.3);border-radius:13px;color:var(--cr);font-size:17px;outline:none;transition:border-color .3s}.dictee-input:focus{border-color:var(--g4)}.dictee-btn{padding:12px 18px;background:var(--g3);border:none;border-radius:13px;color:white;font-size:18px;cursor:pointer;transition:background .2s}.dictee-btn:hover{background:var(--g4)}.monitor-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.mon-row{display:flex;align-items:center;gap:10px;background:rgba(19,48,29,.5);border:1px solid rgba(74,184,112,.12);border-radius:12px;padding:10px 14px;margin-bottom:7px;transition:border-color .3s;flex-wrap:wrap}.mon-row.mon-done{border-color:rgba(74,184,112,.3);background:rgba(19,48,29,.8)}.mon-rank{min-width:32px;text-align:center;font-size:18px}.mon-info{flex:2;min-width:120px}.mon-name{font-weight:700;font-size:14px;color:var(--cr);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mon-bar-wrap{height:4px;background:rgba(74,184,112,.12);border-radius:4px;overflow:hidden}.mon-bar{height:100%;border-radius:4px;transition:width .5s}.mon-right{min-width:55px;text-align:right}.mon-score{font-family:var(--disp);font-size:20px;font-weight:700;color:var(--am2);line-height:1}.mon-q{font-size:10px;color:rgba(200,223,204,.45);margin-top:2px}.mon-activity{width:100%;margin-top:4px;padding-top:4px;border-top:1px solid rgba(74,184,112,.07)}.mon-status{font-size:11px;padding:3px 8px;border-radius:20px;display:inline-block}.mon-status.done{background:rgba(74,184,112,.15);color:var(--g4)}.mon-status.ok{background:rgba(74,184,112,.1);color:var(--g4)}.mon-status.ko{background:rgba(255,80,80,.1);color:#ff9999}.mon-status.wait{background:rgba(200,223,204,.06);color:rgba(200,223,204,.35)}.mon-btn{flex:1;min-width:100px;padding:11px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid;font-family:var(--body)}.mon-btn.grn{background:rgba(74,184,112,.1);border-color:rgba(74,184,112,.3);color:var(--g4)}.mon-btn.blu{background:rgba(32,96,200,.1);border-color:rgba(32,96,200,.3);color:#7ab8f5}.mon-btn.red{background:rgba(255,80,80,.1);border-color:rgba(255,80,80,.25);color:#ff8080}.dictee-toggle-wrap{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;padding:8px 14px;background:rgba(19,48,29,.4);border-radius:12px;border:1px solid rgba(74,184,112,.15)}.dictee-toggle-label{font-size:13px;color:rgba(200,223,204,.85);cursor:pointer}@media(max-width:640px){.modal{max-height:94vh}.modal-bg{padding:6px}}@media(min-width:641px){.minfo-lbl{font-size:11px}.minfo-val{font-size:14px}.modal-latin{font-size:28px}.modal-common{font-size:14px}.modal-famille{font-size:12px}}</style></head><body>'
     +'<h1>🌿 ChloroQuiz — Résultats de session</h1>'
     +'<div class="meta">Code : <strong>'+code+'</strong> &nbsp;·&nbsp; Date : <strong>'+date+'</strong> &nbsp;·&nbsp; '+rows.length+' participant(s)</div>'
     +'<table><thead><tr>'
