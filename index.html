@@ -4281,7 +4281,7 @@ async function renderSessionQuestion(code){
       </div>
       <div class="session-mini-lb" id="session-lb"></div>
     </div>`;
-  startTimer(()=>onSessionTimeout(code));
+  startTimer(()=>onSessionTimeout(code), isDictee?60:TIMER_SEC);
   pollSessionLb(code);
   if(isDictee) setTimeout(()=>{ var el=document.getElementById('dictee-input'); if(el)el.focus(); },150);
 }
