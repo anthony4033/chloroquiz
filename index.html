@@ -3812,12 +3812,18 @@ function generateOneQuestion(pool, level, usedPlantIds){
   const allowKnowledge   = filter.length===0 || filter.some(k=>k!=='photo' && k!=='n3' && k!=='dictee');
   const allowN3          = (filter.length===0 || filter.includes('n3')) && level===3;
 
-  // Construire la liste des types possibles
+  // Construire la liste des types possibles — chaque type activé a le même poids
+  // Les types knowledge sont listés individuellement pour un vrai mélange
   const possible = [];
+  if(allowPhoto)     possible.push('photo');
   if(allowDictee)    possible.push('dictee');
-  else if(allowPhoto) possible.push('photo');
   if(allowN3)        possible.push('n3');
-  if(allowKnowledge) possible.push('knowledge');
+  // Pour knowledge : ajouter autant de fois qu'il y a de champs sélectionnés
+  if(allowKnowledge){
+    const kFields = filter.filter(k=>k!=='photo'&&k!=='n3'&&k!=='dictee');
+    const kCount = kFields.length || 1;
+    for(var _ki=0;_ki<kCount;_ki++) possible.push('knowledge');
+  }
   if(!possible.length) possible.push('photo'); // fallback
 
   const type = possible[Math.floor(Math.random()*possible.length)];
@@ -4073,8 +4079,11 @@ async function pollMonitor(code){
         const okIcon = act.ok ? '✅' : '❌';
         const plantShort = act.plant ? act.plant.split(' ').slice(0,2).join(' ') : '';
         statusHtml = `<span class="mon-status ${act.ok?'ok':'ko'}">${okIcon} Q${act.q} · ${act.label||''} · <em>${plantShort}</em></span>`;
+      } else if((r.current_q||0)>0){
+        // last_activity non dispo (colonne pas encore ajoutée) → fallback sur current_q
+        statusHtml = `<span class="mon-status wait">▶ En cours — Q${r.current_q||0} · ${r.score||0} pt(s)</span>`;
       } else {
-        statusHtml = `<span class="mon-status wait">⏳ En attente…</span>`;
+        statusHtml = `<span class="mon-status wait">⏳ Connexion…</span>`;
       }
       return `<div class="mon-row ${r.done?'mon-done':''}">
         <div class="mon-rank">${rankIcon}</div>
