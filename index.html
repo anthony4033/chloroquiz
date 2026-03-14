@@ -346,9 +346,9 @@ html,body{min-height:100%;font-family:'DM Sans',sans-serif;background:#0b1e12;co
 
 /* ══ MODAL ══ */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);z-index:200;
-  display:flex;align-items:center;justify-content:center;padding:20px;animation:fl-fadein .2s ease}
+  display:flex;align-items:center;justify-content:center;padding:12px;animation:fl-fadein .2s ease}
 .modal{background:#0d2419;border:1px solid rgba(74,184,112,.25);border-radius:22px;padding:0;
-  max-width:760px;width:100%;max-height:78vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(74,184,112,.3) transparent}
+  max-width:920px;width:100%;max-height:90vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(74,184,112,.3) transparent}
 .modal-close{float:right;background:rgba(255,100,100,.1);border:none;color:#ff7070;border-radius:8px;
   padding:5px 12px;cursor:pointer;font-size:18px;transition:background .2s}
 .modal-close:hover{background:rgba(255,100,100,.22)}
@@ -2368,7 +2368,7 @@ async function renderScores(){
       if(!map[k]||s.pct>map[k].pct||(s.pct===map[k].pct&&s.ok>map[k].ok)) map[k]=s; });
     data=Object.values(map);
   }
-  data.sort((a,b)=>b.pct-a.pct||b.ok-a.ok);
+  data.sort((a,b)=>b.ok-a.ok||b.pct-a.pct);
   document.getElementById('lb-sub').textContent=`${data.length} résultat(s) · ${cloudOk?'☁️ Classement partagé en ligne':'💻 Mode local'}`;
   if(!data.length){
     table.innerHTML=`<div class="lb-empty"><span class="lb-empty-icon">🌱</span><p>Aucun score enregistré.<br>Lancez le quiz pour commencer le challenge !</p></div>`;
@@ -2385,7 +2385,7 @@ async function renderScores(){
         <div class="lb-detail">${s.ok} bonnes / ${s.total} · ${s.timeouts||0} hors-temps · ${fmtDate(s.date)}</div>
         <div class="lb-bar-wrap"><div class="lb-bar" style="width:${s.pct}%"></div></div>
       </div>
-      <div class="lb-score-wrap"><div class="lb-pct">${s.pct}%</div><div class="lb-pts">${s.ok} pts</div></div>
+      <div class="lb-score-wrap"><div class="lb-pct">${s.pct}%</div><div class="lb-pts">${s.ok} / ${s.total||20} pts</div></div>
     </div>`;
   }).join('');
 }
@@ -2586,7 +2586,7 @@ function openModal(id){
     // ── Mobile : 2 pages swipeables ──
     const page1=`
       <div class="mswipe-page">
-        <div style="padding:20px 20px 12px;position:relative">
+        <div style="padding:20px 28px 12px;position:relative">
           <button class="modal-close" onclick="closeModal()">✕</button>
           ${p.famille?`<div class="modal-famille">${p.famille}</div>`:''}
           <div class="modal-latin">${p.latin}</div>
@@ -2629,7 +2629,7 @@ function openModal(id){
           ${p.photo&&p.photo2
             ? `<div class="photo-grid" style="margin:12px 0 16px">
                  <img src="${p.photo}"  class="modal-img" style="margin:0;height:200px" onerror="this.style.display='none'" loading="lazy"/>
-                 <img src="${p.photo2}" class="modal-img" style="margin:0;height:260px" onerror="this.style.display='none'" loading="lazy"/>
+                 <img src="${p.photo2}" class="modal-img" style="margin:0;height:310px" onerror="this.style.display='none'" loading="lazy"/>
                </div>`
             : p.photo
               ? `<img src="${p.photo}" class="modal-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy"/><div class="modal-img-fb" style="display:none">${LEAF_SVG}</div>`
