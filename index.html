@@ -1063,6 +1063,7 @@ const FILLERS = {
 // Tous les champs disponibles pour le filtre questions multi
 var MULTI_ALL_FIELDS = [
   {key:'photo',            label:'Reconnaissance',     icon:'📸', levels:[1,2,3]},
+  {key:'dictee',           label:'Dictée botanique',   icon:'✏️', levels:[1,2,3]},
   {key:'feuillage',        label:'Feuillage',          icon:'🍃', levels:[1,2,3]},
   {key:'rusticite',        label:'Rusticité',          icon:'🌡️', levels:[1,2,3]},
   {key:'exposition',       label:'Exposition',         icon:'☀️', levels:[1,2,3]},
@@ -1136,6 +1137,7 @@ let cloudOk = false;
 
 // Quiz
 let qName='', qLevel=1, qPlants=[], qUsed=[], qRound=null;
+let qDicteeMode=false; // Mode dictée botanique
 let qPhotoSel=null, qKQ=null, qKSel=null, qSQ=null, qSSel=null, qPhotoType='identify';
 let qScore={ok:0,total:0,timeouts:0};
 let qNum=0, qPhase='name';
@@ -1745,7 +1747,11 @@ function renderNamePrompt(c){
         ${allTypes.length?`<div style="font-size:11px;color:rgba(200,223,204,.85);font-weight:600;margin-top:8px;margin-bottom:4px">Type</div><div class="filter-chips" id="fchips-type">${makeChips(allTypes,'type')}</div>`:''}
       </div>
 
-      <button style="width:100%;padding:15px;background:linear-gradient(135deg,#1e5030,#2d7a4a);border:none;border-radius:16px;color:white;font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;cursor:pointer;transition:all .2s;margin-top:6px" onclick="startQuiz(false)">🚀 Démarrer — 30s par question</button>
+      <div class="dictee-toggle-wrap">
+        <input type="checkbox" id="dictee-toggle" style="width:16px;height:16px;accent-color:var(--g4);cursor:pointer"/>
+        <label class="dictee-toggle-label" for="dictee-toggle">✏️ Mode dictée — 1 question sur 4 en dictée</label>
+      </div>
+      <button style="width:100%;padding:15px;background:linear-gradient(135deg,#1e5030,#2d7a4a);border:none;border-radius:16px;color:white;font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;cursor:pointer;transition:all .2s;margin-top:10px" onclick="startQuiz(false)">🚀 Démarrer — 30s par question</button>
       <div id="priority-btn-wrap" style="margin-top:10px;display:none">
         <button style="width:100%;padding:13px;background:rgba(255,100,0,.12);border:1px solid rgba(255,140,0,.3);border-radius:16px;color:#ff8c00;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s" onclick="startQuiz(true)">🎯 Réviser mes points faibles</button>
         <div id="priority-hint" style="font-size:11px;color:rgba(255,140,0,.5);text-align:center;margin-top:5px"></div>
@@ -1828,6 +1834,7 @@ function startQuiz(priorityMode=false){
   if(pool.length<2) pool=[...plants];
   qPlants=pool;
 
+  qDicteeMode = document.getElementById('dictee-toggle')?.checked || false;
   buildPhotoRound(); qPhase='photo';
   renderQuiz(document.getElementById('quiz-container'));
   saveQuizState();
@@ -1841,6 +1848,9 @@ function buildPhotoRound(){
   const correct = rand(pool);
   const wrongs = shuffle(qPlants.filter(p=>p.id!==correct.id)).slice(0,3);
   qRound = {correct, options:shuffle([correct,...wrongs])};
+  // Mode dictée : 1 question sur 4 en dictée, reste en identification QCM
+  if(qDicteeMode && Math.random() < 0.25) qPhotoType='dictee';
+  else if(qDicteeMode) qPhotoType='identify';
   qPhotoSel=null; qSSel=null; qSQ=null; qNum++;
 
   // Étape 1 : 50% identification classique, 50% orthographe botanique
@@ -2130,6 +2140,36 @@ function renderQuiz(c){
       }
       c.innerHTML=topbarHTML()+`<div class="qcard">${photoBlock}<div class="qbody">${!qSSel?timerHTML(qNum, 20):''}<div class="phase-label">✍️ Étape 1 — Orthographe botanique</div><div class="q-text">Quelle est l'écriture exacte du nom botanique ?</div><div class="q-opts">${opts}</div>${feedback}${nextBtn}</div></div>`;
       if(!qSSel) startTimer(()=>onPhotoSpellingTimeout());
+    } else if(qPhotoType==='dictee'){
+      // ── Étape 1 : Dictée botanique ──
+      let dictFb='', dictNext='';
+      if(qPhotoSel){
+        const ok = qPhotoSel.trim().toLowerCase() === p.latin.toLowerCase();
+        dictFb=`<div class="k-feedback ${ok?'ok':'ko'}">${ok
+          ?`✅ Exact ! <em>${p.latin}</em>`
+          :`❌ La réponse était : <em style="color:var(--g4)">${p.latin}</em>`
+        }</div>`;
+        dictNext=`<button class="next-btn" onclick="afterPhotoDictee(${ok})">Étape 2 →</button>`;
+      }
+      c.innerHTML=topbarHTML()+`<div class="qcard">${photoBlock}<div class="qbody">`
+        +`${!qPhotoSel?timerHTML(qNum,20):''}`
+        +`<div class="phase-label">✏️ Étape 1 — Dictée botanique</div>`
+        +`<div class="q-text">Quel est le nom latin de ce végétal ?</div>`
+        +`${!qPhotoSel
+          ? `<div class="dictee-wrap">`
+            +`<input id="dictee-input" class="dictee-input" type="text" placeholder="Genre espèce…"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+             style="font-style:italic;font-family:'Playfair Display',serif"
+             onkeydown="if(event.key==='Enter')submitDictee()"/>`
+            +`<button class="dictee-btn" onclick="submitDictee()">→</button>`
+            +`</div>`
+          : ''}`
+        +`${dictFb}${dictNext}`
+        +`</div></div>`;
+      if(!qPhotoSel){
+        startTimer(()=>onDicteeTimeout());
+        setTimeout(()=>{ var el=document.getElementById('dictee-input'); if(el)el.focus(); },100);
+      }
     } else {
       // ── Étape 1 : Identification classique ──
       const opts=qRound.options.map(opt=>{
@@ -2248,6 +2288,49 @@ function onPhotoSpellingTimeout(){
   const qOpts=document.querySelector('.q-opts');
   if(qOpts){const n=document.createElement('div');n.className='timeout-notice';n.innerHTML=`⏰ Temps écoulé ! La bonne graphie : <em>${qSQ.correct}</em>`;qOpts.parentNode.insertBefore(n,qOpts);}
 }
+
+// ── Mode dictée botanique ──
+function submitDictee(){
+  var inp = document.getElementById('dictee-input');
+  if(!inp || qPhotoSel) return;
+  var val = inp.value.trim();
+  if(!val) return;
+  stopTimer();
+  var ok = val.toLowerCase() === qRound.correct.latin.toLowerCase();
+  if(ok){ qScore.ok++; qStreak++; } else { qStreak=0; }
+  qScore.total++;
+  qPhotoSel = val; // marquer comme répondu
+  qHistory.push({latin:qRound.correct.latin, nom:qRound.correct.nom,
+    step1Type:'dictée', step1Ok:ok, step1Correct:qRound.correct.latin,
+    step2Label:'—', step2Ok:null, step2Correct:'—'});
+  renderQuiz(document.getElementById('quiz-container'));
+  setTimeout(()=>showCelebration(ok,false), 500);
+}
+
+function afterPhotoDictee(step1Ok){
+  if(step1Ok){
+    showCelebration(true, false);
+  } else {
+    qKQ=buildKQ(); qKSel=null; qPhase='knowledge';
+    renderQuiz(document.getElementById('quiz-container'));
+  }
+}
+
+function onDicteeTimeout(){
+  stopTimer();
+  qPhotoSel='__timeout__'; qScore.total++; qScore.timeouts++;
+  qHistory.push({latin:qRound.correct.latin, nom:qRound.correct.nom,
+    step1Type:'dictée', step1Ok:false, step1Correct:qRound.correct.latin,
+    step2Label:'—', step2Ok:null, step2Correct:'—'});
+  renderQuiz(document.getElementById('quiz-container'));
+  const notice = document.createElement('div');
+  notice.className='timeout-notice';
+  notice.innerHTML='⏰ Temps écoulé ! La réponse était : <em>'+qRound.correct.latin+'</em>';
+  const body = document.querySelector('.qbody');
+  if(body) body.insertBefore(notice, body.firstChild);
+  setTimeout(()=>showCelebration(false,true),600);
+}
+
 
 function afterPhotoSpelling(){
   // Après orthographe étape 1 : on montre la célébration si correct, sinon direct étape 2
@@ -3705,26 +3788,42 @@ function generateOneQuestion(pool, level, usedPlantIds){
   // Déterminer les types autorisés selon le filtre
   const filter = (typeof multiFieldFilter !== 'undefined' && multiFieldFilter) ? multiFieldFilter : [];
   const allowPhoto       = filter.length===0 || filter.includes('photo');
-  const allowKnowledge   = filter.length===0 || filter.some(k=>k!=='photo' && k!=='n3');
+  const allowDictee      = filter.includes('dictee');
+  const allowKnowledge   = filter.length===0 || filter.some(k=>k!=='photo' && k!=='n3' && k!=='dictee');
   const allowN3          = (filter.length===0 || filter.includes('n3')) && level===3;
 
   // Construire la liste des types possibles
   const possible = [];
-  if(allowPhoto)     possible.push('photo');
+  if(allowDictee)    possible.push('dictee');
+  else if(allowPhoto) possible.push('photo');
   if(allowN3)        possible.push('n3');
   if(allowKnowledge) possible.push('knowledge');
   if(!possible.length) possible.push('photo'); // fallback
 
   const type = possible[Math.floor(Math.random()*possible.length)];
 
-  if(type==='photo'){
+  if(type==='dictee'){
+    return buildDicteeQuestion(p);
+  } else if(type==='photo'){
     return buildPhotoQuestion(p, pool);
   } else if(type==='n3'){
     return buildN3Question(p, pool);
   } else {
-    return buildKnowledgeQuestion(p, pool, level, filter.filter(k=>k!=='photo'&&k!=='n3'));
+    return buildKnowledgeQuestion(p, pool, level, filter.filter(k=>k!=='photo'&&k!=='n3'&&k!=='dictee'));
   }
 }
+function buildDicteeQuestion(p){
+  return {
+    type:'dictee', plantId:p.id, plantLatin:p.latin, plantNom:p.nom,
+    plantPhoto:p.photo||'', plantPhoto2:p.photo2||'',
+    question:'Quel est le nom latin de ce végétal ?',
+    correct:p.latin,
+    options:[], // pas d'options QCM pour la dictée
+    fieldLabel:'Dictée botanique',
+    status:'pending'
+  };
+}
+
 function buildPhotoQuestion(p, pool){
   const wrongs = shuffle(pool.filter(x=>x.id!==p.id)).slice(0,3);
   if(wrongs.length<3) return null;
@@ -4087,9 +4186,19 @@ async function renderSessionQuestion(code){
     renderSessionEnd(code); return;
   }
   const q = sessionQuestions[sessionQIdx];
-  const isPhoto = q.type==='photo';
-  const photoHtml = q.plantPhoto ? `<div class="qphotos one"><img src="${q.plantPhoto}" class="qphoto" onerror="this.style.display='none'" loading="lazy"/></div>` : '';
-  const opts = q.options.map(o=>`
+  const isPhoto = q.type==='photo' || q.type==='dictee';
+  const isDictee = q.type==='dictee';
+  const photoHtml = (q.plantPhoto && (isPhoto||isDictee)) ? `<div class="qphotos one"><img src="${q.plantPhoto}" class="qphoto" onerror="this.style.display='none'" loading="lazy"/></div>` : '';
+  // Dictée multi : champ texte
+  const opts = isDictee
+    ? (`<div class="dictee-wrap">`
+      +`<input id="dictee-input" class="dictee-input" type="text" placeholder="Genre espèce…"
+       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+       style="font-style:italic;font-family:'Playfair Display',serif"
+       onkeydown="if(event.key==='Enter')submitSessionDictee('${code}')"/>`
+      +`<button class="dictee-btn" onclick="submitSessionDictee('${code}')">→</button>`
+      +`</div>`)
+    : q.options.map(o=>`
     <button class="qopt" onclick="pickSessionAnswer(this,'${o.replace(/'/g,"\\'")}','${code}')">
       ${isPhoto?`<span class="opt-latin">${o}</span>`:o}
     </button>`).join('');
@@ -4110,7 +4219,7 @@ async function renderSessionQuestion(code){
         ${isPhoto ? photoHtml : ''}
         <div class="qbody">
           ${timerHTML(sessionQIdx+1, sessionQuestions.length)}
-          <div class="phase-label">${isPhoto?'📸 Identification':'🧠 Connaissance'}</div>
+          <div class="phase-label">${isDictee?'✏️ Dictée botanique':isPhoto?'📸 Identification':'🧠 Connaissance'}</div>
           <div class="q-text">${q.question}</div>
           <div class="q-opts">${opts}</div>
         </div>
@@ -4119,6 +4228,7 @@ async function renderSessionQuestion(code){
     </div>`;
   startTimer(()=>onSessionTimeout(code));
   pollSessionLb(code);
+  if(isDictee) setTimeout(()=>{ var el=document.getElementById('dictee-input'); if(el)el.focus(); },150);
 }
 async function pickSessionAnswer(btn, answer, code){
   cqLog('pickSessionAnswer — Q:', sessionQIdx+1, '| réponse:', answer);
@@ -4138,6 +4248,42 @@ async function pickSessionAnswer(btn, answer, code){
   nextBtn.onclick = ()=>renderSessionQuestion(code);
   document.querySelector('.qbody').appendChild(nextBtn);
 }
+async function submitSessionDictee(code){
+  var inp = document.getElementById('dictee-input');
+  if(!inp) return;
+  var val = inp.value.trim();
+  if(!val) return;
+  inp.disabled = true;
+  document.querySelector('.dictee-btn') && (document.querySelector('.dictee-btn').disabled=true);
+  stopTimer();
+  const q = sessionQuestions[sessionQIdx];
+  const ok = val.toLowerCase() === q.correct.toLowerCase();
+  if(ok) sessionScore.ok++;
+  sessionScore.total++;
+  sessionQIdx++;
+  // Feedback visuel
+  const wrap = document.querySelector('.dictee-wrap');
+  if(wrap){
+    const fb = document.createElement('div');
+    fb.className = 'k-feedback '+(ok?'ok':'ko');
+    fb.innerHTML = ok
+      ? '✅ Exact ! <em>'+q.correct+'</em>'
+      : '❌ La réponse était : <em style="color:var(--g4)">'+q.correct+'</em>';
+    wrap.parentNode.insertBefore(fb, wrap.nextSibling);
+  }
+  // Bouton suivant
+  const nextBtn = document.createElement('button');
+  nextBtn.className='next-btn';
+  nextBtn.textContent = sessionQIdx>=sessionQuestions.length ? 'Voir les résultats →' : 'Question suivante →';
+  nextBtn.onclick = ()=>renderSessionQuestion(code);
+  const body = document.querySelector('.qbody');
+  if(body) body.appendChild(nextBtn);
+  try{ await sbPatch('floralab_session_players','session_code=eq.'+code+'&player_name=eq.'+encodeURIComponent(sessionPlayerName),
+    {score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length});
+  }catch(e){ cqErr('PATCH dictee score failed:',e); }
+}
+
+
 async function onSessionTimeout(code){
   stopTimer(); sessionScore.total++; sessionQIdx++;
   try{ await sbPatch('floralab_session_players','session_code=eq.'+code+'&player_name=eq.'+encodeURIComponent(sessionPlayerName),{score:sessionScore.ok,total:sessionScore.total,current_q:sessionQIdx,done:sessionQIdx>=sessionQuestions.length,updated_at:new Date().toISOString()}); }catch(e){}
@@ -4227,7 +4373,7 @@ function printSessionResults(code, rows, isAdmin){
     +'td{padding:7px 8px;border:1px solid #ddd;vertical-align:middle}'
     +'.footer{margin-top:20px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:10px}'
     +'.print-btn{margin-top:16px;padding:10px 20px;background:#2d7a4a;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;display:block;width:100%}'
-    +'@media print{.print-btn{display:none}}#player-name-input::placeholder,#player-initial-input::placeholder{color:rgba(200,223,204,.55)}@media(max-width:640px){.modal{max-height:94vh}.modal-bg{padding:6px}}@media(min-width:641px){.minfo-lbl{font-size:11px}.minfo-val{font-size:14px}.modal-latin{font-size:28px}.modal-common{font-size:14px}.modal-famille{font-size:12px}}</style></head><body>'
+    +'@media print{.print-btn{display:none}}#player-name-input::placeholder,#player-initial-input::placeholder{color:rgba(200,223,204,.55)}.dictee-wrap{display:flex;gap:8px;margin-bottom:8px}.dictee-input{flex:1;padding:12px 16px;background:rgba(19,48,29,.7);border:1px solid rgba(74,184,112,.3);border-radius:13px;color:var(--cr);font-size:17px;outline:none;transition:border-color .3s}.dictee-input:focus{border-color:var(--g4)}.dictee-btn{padding:12px 18px;background:var(--g3);border:none;border-radius:13px;color:white;font-size:18px;cursor:pointer;transition:background .2s}.dictee-btn:hover{background:var(--g4)}.dictee-toggle-wrap{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;padding:8px 14px;background:rgba(19,48,29,.4);border-radius:12px;border:1px solid rgba(74,184,112,.15)}.dictee-toggle-label{font-size:13px;color:rgba(200,223,204,.85);cursor:pointer}@media(max-width:640px){.modal{max-height:94vh}.modal-bg{padding:6px}}@media(min-width:641px){.minfo-lbl{font-size:11px}.minfo-val{font-size:14px}.modal-latin{font-size:28px}.modal-common{font-size:14px}.modal-famille{font-size:12px}}</style></head><body>'
     +'<h1>🌿 ChloroQuiz — Résultats de session</h1>'
     +'<div class="meta">Code : <strong>'+code+'</strong> &nbsp;·&nbsp; Date : <strong>'+date+'</strong> &nbsp;·&nbsp; '+rows.length+' participant(s)</div>'
     +'<table><thead><tr>'
