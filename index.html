@@ -2187,7 +2187,7 @@ function renderQuiz(c){
         +`${dictFb}${dictNext}`
         +`</div></div>`;
       if(!qPhotoSel){
-        startTimer(()=>onDicteeTimeout());
+        startTimer(()=>onDicteeTimeout(), 60);
         setTimeout(()=>{ var el=document.getElementById('dictee-input'); if(el)el.focus(); },100);
       }
     } else {
