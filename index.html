@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-  <meta name="app-version" content="2026-03-14-v2"/>
+  <meta name="app-version" content="2026-03-14-v3"/>
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="ChloroQuiz">
@@ -462,12 +462,57 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
 .month-btn.selected{background:rgba(74,184,112,.18);border-color:var(--g4);color:var(--g4);font-weight:600}
 .month-display{margin-top:6px;font-size:12px;color:rgba(200,223,204,.5);font-style:italic;min-height:18px}
 
-/* ══ ADMIN TABS ══ */
-.admin-tab{padding:10px 18px;border:none;background:transparent;color:rgba(200,223,204,.45);
-  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;
-  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;border-radius:0}
-.admin-tab:hover{color:var(--cr)}
-.admin-tab.active{color:var(--am2);border-bottom-color:var(--am2)}
+/* ══ ADMIN — NOUVELLE MISE EN PAGE ══ */
+.admin-layout{display:grid;grid-template-columns:220px 1fr;gap:22px;align-items:start}
+.admin-sidebar{display:flex;flex-direction:column;gap:8px;position:sticky;top:80px}
+.admin-sidebar-item{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;
+  border-radius:14px;border:1px solid rgba(74,184,112,.1);
+  background:rgba(19,48,29,.4);cursor:pointer;transition:all .22s;
+  font-family:'DM Sans',sans-serif;text-align:left;width:100%}
+.admin-sidebar-item:hover{background:rgba(74,184,112,.08);border-color:rgba(74,184,112,.25)}
+.admin-sidebar-item.active{
+  background:rgba(232,160,32,.1);border-color:rgba(232,160,32,.35);
+  box-shadow:0 4px 18px rgba(232,160,32,.12)}
+.admin-sidebar-icon{font-size:22px;flex-shrink:0;line-height:1}
+.admin-sidebar-text{flex:1;min-width:0}
+.admin-sidebar-label{font-size:13px;font-weight:700;color:rgba(200,223,204,.85);line-height:1.2}
+.admin-sidebar-item.active .admin-sidebar-label{color:var(--am2)}
+.admin-sidebar-desc{font-size:11px;color:rgba(200,223,204,.35);margin-top:2px;line-height:1.3}
+.admin-sidebar-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;
+  background:rgba(74,184,112,.15);color:var(--g4);border:1px solid rgba(74,184,112,.25);flex-shrink:0}
+/* contenu principal */
+.admin-content{min-width:0}
+/* barre de stats */
+.admin-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.admin-stat-card{background:rgba(19,48,29,.5);border:1px solid rgba(74,184,112,.12);
+  border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:10px}
+.admin-stat-icon{font-size:24px;flex-shrink:0}
+.admin-stat-val{font-family:var(--disp);font-size:20px;font-weight:900;color:var(--g4);line-height:1}
+.admin-stat-lbl{font-size:11px;color:rgba(200,223,204,.4);margin-top:2px}
+/* en-tête section */
+.admin-section-hdr{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.admin-section-title{font-family:var(--disp);font-size:19px;font-weight:700;color:var(--cr)}
+.admin-section-title em{color:var(--am2);font-style:normal}
+.admin-btns-group{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* barre de recherche admin */
+.admin-search{width:100%;padding:11px 16px;background:rgba(11,30,18,.8);
+  border:1px solid rgba(74,184,112,.2);border-radius:12px;
+  color:var(--cr);font-family:'DM Sans',sans-serif;font-size:14px;
+  outline:none;transition:border-color .3s;margin-bottom:14px}
+.admin-search:focus{border-color:rgba(74,184,112,.5)}
+.admin-search::placeholder{color:rgba(200,223,204,.25)}
+/* tab (old compat — caché) */
+.admin-tab{display:none}
+@media(max-width:700px){
+  .admin-layout{grid-template-columns:1fr}
+  .admin-sidebar{flex-direction:row;flex-wrap:wrap;position:static}
+  .admin-sidebar-item{flex:1;min-width:120px;flex-direction:column;align-items:center;
+    text-align:center;padding:10px 8px;gap:6px}
+  .admin-sidebar-desc{display:none}
+  .admin-stats-row{grid-template-columns:1fr 1fr}
+}
 
 /* ══ OFFLINE BANNER ══ */
 #offline-banner{display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
@@ -503,7 +548,29 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
 .collective-row:last-child{border:none}
 .collective-rank{color:rgba(200,223,204,.4);font-size:11px;margin-right:8px}
 
-/* ══ PRINT / PDF ══ */
+/* ══ BOTTOM NAV (mobile only) ══ */
+#bottom-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:rgba(11,30,18,.97);backdrop-filter:blur(20px);
+  border-top:1px solid rgba(74,184,112,.14);
+  padding:0 4px env(safe-area-inset-bottom,0px);
+  height:58px;
+  align-items:stretch;
+  justify-content:space-around;
+}
+.bn-item{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;flex:1;padding:6px 2px;
+  color:rgba(200,223,204,.4);font-size:10px;font-family:'DM Sans',sans-serif;
+  cursor:pointer;border:none;background:transparent;transition:color .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.bn-item.active{color:var(--am2)}
+.bn-item-icon{font-size:20px;line-height:1}
+.bn-item-label{font-size:10px;font-weight:500;letter-spacing:.2px}
+.bn-admin{color:rgba(232,160,32,.4)}
+.bn-admin.active{color:var(--am2)}
 @media print{
   body{background:#fff;color:#000}
   #app-screen>*:not(#page-quiz){display:none!important}
@@ -540,6 +607,10 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
   .temp-btn{font-size:11px;padding:5px 7px}
   .type-chip{font-size:12px;padding:6px 10px}
   select.fi{font-size:14px}
+  /* ── Bottom nav mobile ── */
+  .hdr-nav{display:none!important}
+  .page{padding-bottom:78px}
+  #bottom-nav{display:flex!important}
 }
 
 /* ══ MULTIJOUEUR ══════════════════════════════════════════════ */
@@ -742,13 +813,13 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
         <div class="fc-desc" id="home-count-desc">Consultez les fiches détaillées avec toutes les informations botaniques.</div>
         <div class="fc-arrow">Consulter →</div>
       </div>
-      <div class="fc fc-admin"       <div class="fc" style="background:linear-gradient(135deg,rgba(32,96,200,.15),rgba(50,80,180,.08));border-color:rgba(32,96,200,.3)">
+      <div class="fc" style="background:linear-gradient(135deg,rgba(32,96,200,.15),rgba(50,80,180,.08));border-color:rgba(32,96,200,.3);cursor:default">
         <span class="fc-icon">🎮</span>
         <div class="fc-title">Rejoindre une session</div>
-        <div class="fc-desc">Votre formateur a lancé un quiz en direct ? Entrez le code pour rejoindre.</div>
+        <div class="fc-desc">Votre formateur a lancé un quiz en direct ? Entrez le code à 4 chiffres pour rejoindre.</div>
         <div class="join-session-bar">
           <input class="join-code-input" id="join-code-input" maxlength="4" placeholder="CODE" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
-          <button class="join-btn" onclick="joinSession()">→</button>
+          <button class="join-btn" id="join-btn" onclick="joinSession()">→</button>
         </div>
       </div>
       <div class="fc fc-admin" id="home-admin-card" onclick="showPage('admin')" style="display:none">
@@ -798,79 +869,189 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
 
   <!-- ADMIN -->
   <div class="page" id="page-admin" style="display:none">
-   <div class="pg-title" style="margin-bottom:20px">Administration <span style="color: var(--g4);">Chloro</span><em style="color: var(--am2); font-family: 'Montserrat', sans-serif; font-style: normal; font-weight: bold;">Quiz</em></div>
-    <!-- ADMIN TABS -->
-    <div style="display:flex;gap:8px;margin-bottom:28px;border-bottom:1px solid rgba(74,184,112,.12);padding-bottom:0">
-      <button class="admin-tab active" id="atab-plantes" onclick="switchAdminTab('plantes')">🌿 Plantes</button>
-      <button class="admin-tab" id="atab-cloud"   onclick="switchAdminTab('cloud')">☁️ Cloud</button>
-      <button class="admin-tab" id="atab-mdp"     onclick="switchAdminTab('mdp')">🔐 Mots de passe</button>
-      <button class="admin-tab" id="atab-multi"   onclick="switchAdminTab('multi')">🏆 Multi</button>
-    </div>
-    <!-- PLANTES TAB -->
-    <div id="admin-tab-plantes">
-      <div class="admin-top" style="margin-bottom:18px">
-        <div class="pg-sub" id="admin-count" style="margin:0"></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <button class="add-btn" onclick="openForm(null)">+ Ajouter une plante</button>
-          <button class="add-btn" onclick="mergePlants()" style="background:linear-gradient(135deg,#2060c8,#3080e8);color:white;font-size:13px" title="Ajoute uniquement les plantes absentes du catalogue — ne modifie pas les plantes existantes">⬇️ Fusionner les plantes par défaut</button>
-        </div>
+
+    <!-- EN-TÊTE ADMIN -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:26px">
+      <div>
+        <div class="pg-title" style="margin-bottom:4px">⚙️ Administration <span style="color:var(--g4)">Chloro</span><em style="color:var(--am2);font-family:'Montserrat',sans-serif;font-style:normal;font-weight:bold">Quiz</em></div>
+        <div id="admin-count" style="font-size:13px;color:rgba(200,223,204,.45)"></div>
       </div>
-      <div class="admin-list" id="admin-list"></div>
-    </div>
-    <!-- CLOUD TAB -->
-    <div id="admin-tab-cloud" style="display:none">
-      <div id="cloud-banner-zone-tab"></div>
-    </div>
-    <!-- MDP TAB -->
-    <div id="admin-tab-mdp" style="display:none">
-      <div style="max-width:480px">
-        <div style="font-size:14px;color:rgba(200,223,204,.5);margin-bottom:24px;line-height:1.7">
-          Modifiez les mots de passe d'accès à ChloroQuiz. Les changements sont appliqués immédiatement
-          et sauvegardés${cloudOk?' dans le cloud (tous les appareils)':' localement sur cet appareil'}.
+      <div id="admin-stats-row" class="admin-stats-row" style="flex:0 0 auto;min-width:0">
+        <div class="admin-stat-card">
+          <span class="admin-stat-icon">🌿</span>
+          <div><div class="admin-stat-val" id="stat-nb-plantes">—</div><div class="admin-stat-lbl">Plantes</div></div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:18px">
-          <div style="background:rgba(19,48,29,.5);border:1px solid rgba(74,184,112,.15);border-radius:16px;padding:22px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-              <span style="font-size:22px">👤</span>
-              <div>
-                <div style="font-weight:600;color:var(--cr);font-size:15px">Mot de passe Visiteur</div>
-                <div style="font-size:12px;color:rgba(200,223,204,.35)">Accès lecture seule — à partager aux apprentis</div>
-              </div>
-            </div>
-            <input class="fi" id="pw-new-user" type="text" placeholder="Nouveau mot de passe visiteur" autocomplete="off" style="margin-bottom:0"/>
-          </div>
-          <div style="background:rgba(58,34,0,.4);border:1px solid rgba(232,160,32,.18);border-radius:16px;padding:22px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-              <span style="font-size:22px">👑</span>
-              <div>
-                <div style="font-weight:600;color:var(--am2);font-size:15px">Mot de passe Formateur</div>
-                <div style="font-size:12px;color:rgba(200,223,204,.35)">Accès admin complet — à garder secret</div>
-              </div>
-            </div>
-            <input class="fi" id="pw-new-admin" type="text" placeholder="Nouveau mot de passe formateur" autocomplete="off" style="margin-bottom:0;border-color:rgba(232,160,32,.25)"/>
-          </div>
+        <div class="admin-stat-card">
+          <span class="admin-stat-icon" id="stat-cloud-icon">☁️</span>
+          <div><div class="admin-stat-val" id="stat-cloud-val">—</div><div class="admin-stat-lbl">Synchronisation</div></div>
         </div>
-        <div style="margin-top:8px;font-size:12px;color:rgba(200,223,204,.3)">⚠️ Minimum 6 caractères. Évitez les espaces.</div>
-        <div id="pw-change-msg" style="min-height:20px;margin-top:10px;font-size:13px"></div>
-        <button onclick="changePasswords()" style="margin-top:16px;width:100%;padding:14px;background:linear-gradient(135deg,var(--am),var(--am2));border:none;border-radius:13px;color:#0b1e12;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s">
-          🔐 Enregistrer les nouveaux mots de passe
-        </button>
-        <button onclick="resetPasswordsToDefault()" style="margin-top:10px;width:100%;padding:11px;background:rgba(255,100,100,.08);border:1px solid rgba(255,100,100,.18);border-radius:13px;color:#ff9999;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .2s">
-          Réinitialiser aux mots de passe par défaut
-        </button>
+        <div class="admin-stat-card">
+          <span class="admin-stat-icon">🏆</span>
+          <div><div class="admin-stat-val" id="stat-nb-scores">—</div><div class="admin-stat-lbl">Scores enregistrés</div></div>
+        </div>
       </div>
     </div>
 
-    <!-- MULTI TAB -->
-    <div id="admin-tab-multi" style="display:none">
-      <div id="multi-container"></div>
-    </div>
+    <!-- LAYOUT SIDEBAR + CONTENU -->
+    <div class="admin-layout">
+
+      <!-- SIDEBAR NAV -->
+      <nav class="admin-sidebar">
+        <button class="admin-sidebar-item active" id="atab-plantes" onclick="switchAdminTab('plantes')">
+          <span class="admin-sidebar-icon">🌿</span>
+          <div class="admin-sidebar-text">
+            <div class="admin-sidebar-label">Catalogue</div>
+            <div class="admin-sidebar-desc">Gérer les plantes</div>
+          </div>
+          <span class="admin-sidebar-badge" id="sidebar-badge-plantes">0</span>
+        </button>
+        <button class="admin-sidebar-item" id="atab-cloud" onclick="switchAdminTab('cloud')">
+          <span class="admin-sidebar-icon">☁️</span>
+          <div class="admin-sidebar-text">
+            <div class="admin-sidebar-label">Cloud</div>
+            <div class="admin-sidebar-desc">Connexion Supabase</div>
+          </div>
+        </button>
+        <button class="admin-sidebar-item" id="atab-mdp" onclick="switchAdminTab('mdp')">
+          <span class="admin-sidebar-icon">🔐</span>
+          <div class="admin-sidebar-text">
+            <div class="admin-sidebar-label">Accès</div>
+            <div class="admin-sidebar-desc">Mots de passe</div>
+          </div>
+        </button>
+        <button class="admin-sidebar-item" id="atab-multi" onclick="switchAdminTab('multi')">
+          <span class="admin-sidebar-icon">🏆</span>
+          <div class="admin-sidebar-text">
+            <div class="admin-sidebar-label">Multijoueur</div>
+            <div class="admin-sidebar-desc">Sessions en direct</div>
+          </div>
+        </button>
+        <!-- séparateur + lien rapide classement -->
+        <div style="margin-top:8px;padding-top:14px;border-top:1px solid rgba(74,184,112,.1)">
+          <button onclick="showPage('scores')" style="width:100%;padding:10px 14px;border-radius:11px;border:1px solid rgba(74,184,112,.12);background:transparent;color:rgba(200,223,204,.4);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:8px"
+            onmouseover="this.style.color='var(--g4)'" onmouseout="this.style.color='rgba(200,223,204,.4)'">
+            <span>📊</span> Voir le classement
+          </button>
+          <button onclick="showPage('stats')" style="width:100%;padding:10px 14px;border-radius:11px;border:1px solid rgba(74,184,112,.12);background:transparent;color:rgba(200,223,204,.4);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:8px;margin-top:6px"
+            onmouseover="this.style.color='var(--g4)'" onmouseout="this.style.color='rgba(200,223,204,.4)'">
+            <span>📈</span> Statistiques
+          </button>
+        </div>
+      </nav>
+
+      <!-- CONTENU DES SECTIONS -->
+      <div class="admin-content">
+
+        <!-- ── PLANTES ── -->
+        <div id="admin-tab-plantes">
+          <div class="admin-section-hdr">
+            <div class="admin-section-title">Catalogue <em>végétaux</em></div>
+            <div class="admin-btns-group">
+              <button class="add-btn" onclick="openForm(null)">+ Ajouter</button>
+              <button class="add-btn" onclick="mergePlants()"
+                style="background:linear-gradient(135deg,#1a50a8,#2868d0);font-size:13px"
+                title="Ajoute uniquement les plantes absentes — ne modifie pas les existantes">
+                ⬇️ Fusionner par défaut
+              </button>
+            </div>
+          </div>
+          <input class="admin-search" id="admin-search-input"
+            placeholder="🔍  Rechercher dans le catalogue (latin, nom commun, famille…)"
+            oninput="filterAdminList(this.value)"/>
+          <div class="admin-list" id="admin-list"></div>
+        </div>
+
+        <!-- ── CLOUD ── -->
+        <div id="admin-tab-cloud" style="display:none">
+          <div class="admin-section-hdr">
+            <div class="admin-section-title">Connexion <em>cloud</em></div>
+          </div>
+          <div id="cloud-banner-zone-tab"></div>
+        </div>
+
+        <!-- ── MDP ── -->
+        <div id="admin-tab-mdp" style="display:none">
+          <div class="admin-section-hdr">
+            <div class="admin-section-title">Gestion des <em>accès</em></div>
+          </div>
+          <div style="max-width:480px">
+            <div style="font-size:14px;color:rgba(200,223,204,.5);margin-bottom:24px;line-height:1.7">
+              Modifiez les mots de passe d'accès à ChloroQuiz. Les changements sont appliqués immédiatement
+              et sauvegardés${cloudOk?' dans le cloud (tous les appareils)':' localement sur cet appareil'}.
+            </div>
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <div style="background:rgba(19,48,29,.5);border:1px solid rgba(74,184,112,.15);border-radius:16px;padding:22px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                  <span style="font-size:22px">👤</span>
+                  <div>
+                    <div style="font-weight:600;color:var(--cr);font-size:15px">Mot de passe Visiteur</div>
+                    <div style="font-size:12px;color:rgba(200,223,204,.35)">Accès lecture seule — à partager aux apprentis</div>
+                  </div>
+                </div>
+                <input class="fi" id="pw-new-user" type="text" placeholder="Nouveau mot de passe visiteur" autocomplete="off" style="margin-bottom:0"/>
+              </div>
+              <div style="background:rgba(58,34,0,.4);border:1px solid rgba(232,160,32,.18);border-radius:16px;padding:22px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                  <span style="font-size:22px">👑</span>
+                  <div>
+                    <div style="font-weight:600;color:var(--am2);font-size:15px">Mot de passe Formateur</div>
+                    <div style="font-size:12px;color:rgba(200,223,204,.35)">Accès admin complet — à garder secret</div>
+                  </div>
+                </div>
+                <input class="fi" id="pw-new-admin" type="text" placeholder="Nouveau mot de passe formateur" autocomplete="off" style="margin-bottom:0;border-color:rgba(232,160,32,.25)"/>
+              </div>
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:rgba(200,223,204,.3)">⚠️ Minimum 6 caractères. Évitez les espaces.</div>
+            <div id="pw-change-msg" style="min-height:20px;margin-top:10px;font-size:13px"></div>
+            <button onclick="changePasswords()" style="margin-top:16px;width:100%;padding:14px;background:linear-gradient(135deg,var(--am),var(--am2));border:none;border-radius:13px;color:#0b1e12;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s">
+              🔐 Enregistrer les nouveaux mots de passe
+            </button>
+            <button onclick="resetPasswordsToDefault()" style="margin-top:10px;width:100%;padding:11px;background:rgba(255,100,100,.08);border:1px solid rgba(255,100,100,.18);border-radius:13px;color:#ff9999;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .2s">
+              Réinitialiser aux mots de passe par défaut
+            </button>
+          </div>
+        </div>
+
+        <!-- ── MULTI ── -->
+        <div id="admin-tab-multi" style="display:none">
+          <div class="admin-section-hdr">
+            <div class="admin-section-title">Sessions <em>multijoueur</em></div>
+          </div>
+          <div id="multi-container"></div>
+        </div>
+
+      </div><!-- /admin-content -->
+    </div><!-- /admin-layout -->
   </div>
 
   <!-- STATS (formateur uniquement) -->
   <div class="page" id="page-stats" style="display:none">
     <div id="stats-container"></div>
   </div>
+
+  <!-- BOTTOM NAV MOBILE -->
+  <nav id="bottom-nav" role="navigation" aria-label="Navigation principale">
+    <button class="bn-item active" id="bn-home" onclick="showPage('home')" aria-label="Accueil">
+      <span class="bn-item-icon">🏠</span>
+      <span class="bn-item-label">Accueil</span>
+    </button>
+    <button class="bn-item" id="bn-quiz" onclick="showPage('quiz')" aria-label="Quiz">
+      <span class="bn-item-icon">📸</span>
+      <span class="bn-item-label">Quiz</span>
+    </button>
+    <button class="bn-item" id="bn-fiches" onclick="showPage('fiches')" aria-label="Fiches">
+      <span class="bn-item-icon">📋</span>
+      <span class="bn-item-label">Fiches</span>
+    </button>
+    <button class="bn-item" id="bn-scores" onclick="showPage('scores')" aria-label="Classement">
+      <span class="bn-item-icon">🏆</span>
+      <span class="bn-item-label">Classement</span>
+    </button>
+    <button class="bn-item bn-admin" id="bn-admin-mob" onclick="showPage('admin')" aria-label="Admin" style="display:none">
+      <span class="bn-item-icon">⚙️</span>
+      <span class="bn-item-label">Admin</span>
+    </button>
+  </nav>
 
 </div>
 
@@ -1518,10 +1699,17 @@ function flashSaved(){
 //  AUTH
 // ══════════════════════════════════════════════════════
 document.getElementById('pw-input').addEventListener('keydown',e=>{if(e.key==='Enter')checkPassword();});
-function checkPassword(){
+async function checkPassword(){
   const v=document.getElementById('pw-input').value.trim();
-  if(v===PW_ADMIN){login('admin');return;}
-  if(v===PW_USER){login('user');return;}
+  const btn=document.querySelector('.pw-btn');
+  if(v===PW_ADMIN||v===PW_USER){
+    btn.disabled=true;
+    btn.innerHTML='<span class="spinner" style="width:16px;height:16px;border-width:2px;vertical-align:middle"></span> Connexion…';
+    await login(v===PW_ADMIN?'admin':'user');
+    btn.disabled=false;
+    btn.innerHTML='Accéder à ChloroQuiz →';
+    return;
+  }
   document.getElementById('pw-err').textContent='❌ Mot de passe incorrect';
   document.getElementById('pw-input').value='';
 }
@@ -1599,6 +1787,7 @@ async function login(r, silent=false){
     document.getElementById('role-badge').textContent='👑 Formateur';
     document.getElementById('role-badge').classList.add('admin');
     document.getElementById('lb-reset-btn').style.display='';
+    const bnAdm=document.getElementById('bn-admin-mob'); if(bnAdm) bnAdm.style.display='';
   }
   // Try cloud connection
   updateCloudDot();
@@ -1628,6 +1817,7 @@ function logout(){
   document.getElementById('lb-reset-btn').style.display='none';
   document.getElementById('role-badge').textContent='👤 Visiteur';
   document.getElementById('role-badge').classList.remove('admin');
+  const bnAdm=document.getElementById('bn-admin-mob'); if(bnAdm) bnAdm.style.display='none';
 }
 
 // ══════════════════════════════════════════════════════
@@ -1641,6 +1831,12 @@ function showPage(p){
   });
   const pgEl=document.getElementById('page-'+p); if(pgEl) pgEl.style.display='';
   const nb=document.getElementById('nb-'+p); if(nb) nb.classList.add('active');
+  // Sync bottom nav
+  ['home','quiz','fiches','scores'].forEach(id=>{
+    const bn=document.getElementById('bn-'+id); if(bn) bn.classList.toggle('active', id===p);
+  });
+  const bnAdm=document.getElementById('bn-admin-mob');
+  if(bnAdm) bnAdm.classList.toggle('active', p==='admin');
   if(p!=='quiz') clearQuizState();
   if(p==='home')   renderHome();
   if(p==='quiz')   initQuizPage();
@@ -3069,11 +3265,39 @@ async function resetPasswordsToDefault(){
 }
 
 function renderAdmin(){
-  document.getElementById('admin-count').textContent=`${plants.length} plante(s) · ${cloudOk?'☁️ sauvegarde cloud':'💻 sauvegarde locale'}`;
-  const list=document.getElementById('admin-list');
+  const nb = plants.length;
+  const cloudTxt = cloudOk ? '☁️ sauvegarde cloud' : '💻 sauvegarde locale';
+  document.getElementById('admin-count').textContent = `${nb} plante(s) · ${cloudTxt}`;
+  // Stat cards
+  const statNb = document.getElementById('stat-nb-plantes');
+  if(statNb) statNb.textContent = nb;
+  const statCv = document.getElementById('stat-cloud-val');
+  if(statCv) statCv.textContent = cloudOk ? 'Cloud' : 'Local';
+  const statCi = document.getElementById('stat-cloud-icon');
+  if(statCi) statCi.textContent = cloudOk ? '☁️' : '💻';
+  // Scores count (async, best-effort)
+  (async()=>{
+    const statSc = document.getElementById('stat-nb-scores');
+    if(!statSc) return;
+    try{
+      if(cloudOk && window.SUPA_URL && window.SUPA_KEY){
+        const r = await fetch(window.SUPA_URL+'/rest/v1/scores?select=id',{headers:{'apikey':window.SUPA_KEY,'Authorization':'Bearer '+window.SUPA_KEY,'Prefer':'count=exact','Range':'0-0'}});
+        const total = r.headers.get('content-range');
+        statSc.textContent = total ? total.split('/')[1] : '—';
+      } else {
+        const loc = JSON.parse(localStorage.getItem('cq_scores')||'[]');
+        statSc.textContent = loc.length || '—';
+      }
+    }catch(e){ statSc.textContent='—'; }
+  })();
+  // Badge sidebar
+  const badge = document.getElementById('sidebar-badge-plantes');
+  if(badge) badge.textContent = nb;
+  // Liste
+  const list = document.getElementById('admin-list');
   if(!plants.length){ list.innerHTML=`<div class="empty"><span class="empty-icon">🌱</span><p>Aucune plante. Commencez par en ajouter une !</p></div>`; return; }
-  list.innerHTML=plants.map(p=>`
-    <div class="admin-row">
+  list.innerHTML = plants.map(p=>`
+    <div class="admin-row" data-search="${(p.latin+' '+(p.nom||'')+' '+(p.famille||'')).toLowerCase()}">
       ${p.photo?`<img src="${p.photo}" class="admin-row-thumb" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy"/><div class="admin-row-thumb-fb" style="display:none">${LEAF_SVG_SM}</div>`:`<div class="admin-row-thumb-fb">${LEAF_SVG_SM}</div>`}
       <div class="admin-row-info">
         <div class="admin-row-latin">${p.latin}</div>
@@ -3084,6 +3308,17 @@ function renderAdmin(){
         <button class="del-btn" onclick="deletePlant(${p.id})">🗑️</button>
       </div>
     </div>`).join('');
+  // Remettre le filtre si actif
+  const si = document.getElementById('admin-search-input');
+  if(si && si.value) filterAdminList(si.value);
+}
+
+function filterAdminList(q){
+  const rows = document.querySelectorAll('#admin-list .admin-row');
+  const s = q.trim().toLowerCase();
+  rows.forEach(r=>{
+    r.style.display = (!s || (r.dataset.search||'').includes(s)) ? '' : 'none';
+  });
 }
 
 async function deletePlant(id){
@@ -4133,17 +4368,21 @@ async function endSessionAdmin(){
 }
 async function joinSession(){
   const codeInput = document.getElementById('join-code-input');
+  const joinBtn = document.getElementById('join-btn');
   const code = (codeInput?.value||'').trim();
   if(code.length!==4){ codeInput.style.borderColor='#ff7070'; return; }
   if(!cloudOk){ alert('⚠️ Connexion internet requise pour rejoindre une session.'); return; }
+  codeInput.style.borderColor='';
+  if(joinBtn){ joinBtn.disabled=true; joinBtn.innerHTML='<span class="spinner" style="width:14px;height:14px;border-width:2px;vertical-align:middle"></span>'; }
   try{
     const rows = await sbGet('floralab_sessions',`code=eq.${code}&select=*`);
-    if(!rows.length){ alert('❌ Code invalide ou session inexistante.'); codeInput.style.borderColor='#ff7070'; return; }
+    if(!rows.length){ alert('❌ Code invalide ou session inexistante.'); codeInput.style.borderColor='#ff7070'; if(joinBtn){joinBtn.disabled=false;joinBtn.innerHTML='→';} return; }
     const session = rows[0];
-    if(session.status==='ended'){ alert('⏹ Cette session est terminée.'); return; }
+    if(session.status==='ended'){ alert('⏹ Cette session est terminée.'); if(joinBtn){joinBtn.disabled=false;joinBtn.innerHTML='→';} return; }
     // Demander le prénom
+    if(joinBtn){joinBtn.disabled=false;joinBtn.innerHTML='→';}
     showJoinNamePrompt(code, session);
-  } catch(e){ alert('Erreur de connexion : '+e.message); }
+  } catch(e){ alert('Erreur de connexion : '+e.message); if(joinBtn){joinBtn.disabled=false;joinBtn.innerHTML='→';} }
 }
 async function showJoinNamePrompt(code, session){
   const root = document.getElementById('overlay-root');
