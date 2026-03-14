@@ -348,19 +348,19 @@ html,body{min-height:100%;font-family:'DM Sans',sans-serif;background:#0b1e12;co
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);z-index:200;
   display:flex;align-items:center;justify-content:center;padding:12px;animation:fl-fadein .2s ease}
 .modal{background:#0d2419;border:1px solid rgba(74,184,112,.25);border-radius:22px;padding:0;
-  max-width:920px;width:100%;max-height:90vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(74,184,112,.3) transparent}
+  max-width:1020px;width:100%;max-height:92vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(74,184,112,.3) transparent}
 .modal-close{float:right;background:rgba(255,100,100,.1);border:none;color:#ff7070;border-radius:8px;
   padding:5px 12px;cursor:pointer;font-size:18px;transition:background .2s}
 .modal-close:hover{background:rgba(255,100,100,.22)}
-.modal-img{width:100%;height:200px;object-fit:cover;border-radius:13px;margin:12px 0 16px;display:block}.modal-img-full{width:100%;max-height:55vw;object-fit:cover;display:block}.mswipe-modal{padding:0;overflow:hidden;position:relative}.mswipe-track{display:flex;transition:transform .3s ease;will-change:transform;cursor:grab}.mswipe-track:active{cursor:grabbing}.mswipe-page{min-width:100%;box-sizing:border-box}.mswipe-dots{display:flex;justify-content:center;gap:8px;padding:8px 0 10px}.mswipe-dot{width:8px;height:8px;border-radius:50%;background:rgba(200,223,204,.2);cursor:pointer;transition:background .2s}.mswipe-dot.active{background:var(--g4)}
+.modal-img{width:100%;height:200px;object-fit:cover;border-radius:13px;margin:12px 0 16px;display:block}.modal-img-full{width:100%;max-height:64vw;object-fit:cover;display:block}.mswipe-modal{padding:0;overflow:hidden;position:relative}.mswipe-track{display:flex;transition:transform .3s ease;will-change:transform;cursor:grab;align-items:flex-start}.mswipe-track:active{cursor:grabbing}.mswipe-page{min-width:100%;box-sizing:border-box;max-height:82vh;overflow-y:auto;overflow-x:hidden}.mswipe-dots{display:flex;justify-content:center;gap:8px;padding:8px 0 10px}.mswipe-dot{width:8px;height:8px;border-radius:50%;background:rgba(200,223,204,.2);cursor:pointer;transition:background .2s}.mswipe-dot.active{background:var(--g4)}
 .modal-img-fb{width:100%;height:200px;border-radius:13px;margin:12px 0 16px;background:linear-gradient(135deg,#1e5030,#2d7a4a);display:flex;align-items:center;justify-content:center}
 .modal-famille{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--g4);margin-bottom:3px}
 .modal-latin{font-family:var(--disp);font-size:26px;font-weight:900;font-style:italic;color:var(--cr)}
 .modal-common{font-size:13px;color:rgba(200,223,204,.75);margin-bottom:14px}
-.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
-.minfo{background:rgba(19,48,29,.6);border:1px solid rgba(74,184,112,.12);border-radius:10px;padding:10px 13px}
-.minfo-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(200,223,204,.65);margin-bottom:3px}
-.minfo-val{font-size:13px;color:var(--cr);font-weight:600}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.minfo{background:rgba(19,48,29,.6);border:1px solid rgba(74,184,112,.12);border-radius:10px;padding:8px 10px}
+.minfo-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(200,223,204,.65);margin-bottom:2px}
+.minfo-val{font-size:12px;color:var(--cr);font-weight:600}
 .modal-sec-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--g4);margin-bottom:6px}
 .modal-sec-text{font-size:13px;color:rgba(200,223,204,.9);line-height:1.7}
 
@@ -519,7 +519,7 @@ textarea.fi{min-height:68px;resize:vertical;line-height:1.5}
 .empty{text-align:center;padding:60px 20px;color:rgba(200,223,204,.3)}
 .empty-icon{font-size:56px;display:block;margin-bottom:14px;opacity:.35}
 @media(max-width:560px){
-  .form-grid{grid-template-columns:1fr}.modal-grid{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
   .page{padding:22px 14px}.home-title{font-size:34px}.pg-title{font-size:26px}
   .qphoto,.qphoto-fallback{height:260px}.cel-card{padding:36px 20px}
   .hdr{padding:11px 14px}.nb{padding:6px 9px;font-size:12px}
@@ -2586,7 +2586,7 @@ function openModal(id){
     // ── Mobile : 2 pages swipeables ──
     const page1=`
       <div class="mswipe-page">
-        <div style="padding:20px 28px 12px;position:relative">
+        <div style="padding:14px 52px 10px 16px;position:relative">
           <button class="modal-close" onclick="closeModal()">✕</button>
           ${p.famille?`<div class="modal-famille">${p.famille}</div>`:''}
           <div class="modal-latin">${p.latin}</div>
@@ -2597,7 +2597,7 @@ function openModal(id){
       </div>`;
     const page2=`
       <div class="mswipe-page" style="overflow-y:auto">
-        <div style="padding:16px 20px">
+        <div style="padding:14px 52px 16px 16px">
           <button class="modal-close" onclick="closeModal()">✕</button>
           ${p.famille?`<div class="modal-famille">${p.famille}</div>`:''}
           <div class="modal-latin" style="font-size:18px;margin-bottom:12px">${p.latin}</div>
@@ -2622,21 +2622,25 @@ function openModal(id){
     document.getElementById('overlay-root').innerHTML=`
       <div class="modal-bg" onclick="if(event.target===this)closeModal()">
         <div class="modal">
+          <div style="padding:28px 54px 0 28px;position:relative">
           <button class="modal-close" onclick="closeModal()">✕</button>
           ${p.famille?`<div class="modal-famille">${p.famille}</div>`:''}
           <div class="modal-latin">${p.latin}</div>
           <div class="modal-common">${p.nom||''}${p.feuillage?` <span style="display:inline-block;padding:2px 10px;border-radius:100px;font-size:11px;background:rgba(100,160,255,.12);color:#a0c4ff;border:1px solid rgba(100,160,255,.2);margin-left:6px;font-family:'DM Sans',sans-serif">${p.feuillage==='Caduc'?'🍂':p.feuillage==='Persistant'?'🌿':'🍁'} ${p.feuillage}</span>`:''}</div>
+          </div>
           ${p.photo&&p.photo2
             ? `<div class="photo-grid" style="margin:12px 0 16px">
-                 <img src="${p.photo}"  class="modal-img" style="margin:0;height:200px" onerror="this.style.display='none'" loading="lazy"/>
+                 <img src="${p.photo}"  class="modal-img" style="margin:0;height:310px" onerror="this.style.display='none'" loading="lazy"/>
                  <img src="${p.photo2}" class="modal-img" style="margin:0;height:310px" onerror="this.style.display='none'" loading="lazy"/>
                </div>`
             : p.photo
               ? `<img src="${p.photo}" class="modal-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy"/><div class="modal-img-fb" style="display:none">${LEAF_SVG}</div>`
               : `<div class="modal-img-fb">${LEAF_SVG}</div>`
           }
+          <div style="padding:0 28px 28px 28px">
           ${fields?`<div class="modal-grid">${fields}</div>`:''}
           ${p.description?`<div class="modal-sec-title">Description</div><div class="modal-sec-text">${p.description}</div>`:''}
+          </div>
         </div>
       </div>`;
   }
@@ -4067,7 +4071,7 @@ function printSessionResults(code, rows, isAdmin){
     +'td{padding:7px 8px;border:1px solid #ddd;vertical-align:middle}'
     +'.footer{margin-top:20px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:10px}'
     +'.print-btn{margin-top:16px;padding:10px 20px;background:#2d7a4a;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;display:block;width:100%}'
-    +'@media print{.print-btn{display:none}}#player-name-input::placeholder,#player-initial-input::placeholder{color:rgba(200,223,204,.55)}</style></head><body>'
+    +'@media print{.print-btn{display:none}}#player-name-input::placeholder,#player-initial-input::placeholder{color:rgba(200,223,204,.55)}@media(max-width:640px){.modal{max-height:94vh}.modal-bg{padding:6px}}</style></head><body>'
     +'<h1>🌿 ChloroQuiz — Résultats de session</h1>'
     +'<div class="meta">Code : <strong>'+code+'</strong> &nbsp;·&nbsp; Date : <strong>'+date+'</strong> &nbsp;·&nbsp; '+rows.length+' participant(s)</div>'
     +'<table><thead><tr>'
