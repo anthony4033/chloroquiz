@@ -2573,8 +2573,13 @@ function renderFiches(){
 
 function openModal(id){
   const p=plants.find(x=>x.id===id); if(!p)return;
-  const KALL=[...KFIELDS_N2];
-  const fields=KALL.filter(f=>p[f.key]).map(f=>`<div class="minfo"><div class="minfo-lbl">${f.label}</div><div class="minfo-val">${p[f.key]}</div></div>`).join('');
+  // Tous les champs remplis — KFIELDS_N2 + type + usageAmenagement
+  const KALL_MODAL=[
+    ...KFIELDS_N2,
+    {key:'type',             label:'Type végétal'},
+    {key:'usageAmenagement', label:'Usage aménagement'},
+  ];
+  const fields=KALL_MODAL.filter(f=>p[f.key]).map(f=>`<div class="minfo"><div class="minfo-lbl">${f.label}</div><div class="minfo-val">${p[f.key]}</div></div>`).join('');
   const photoHTML = p.photo
     ? `<img src="${p.photo}" class="modal-img-full" onerror="this.style.display='none'" loading="lazy"/>`
     + (p.photo2?`<img src="${p.photo2}" class="modal-img-full" style="margin-top:8px" onerror="this.style.display='none'" loading="lazy"/>`:'')
@@ -4071,7 +4076,7 @@ function printSessionResults(code, rows, isAdmin){
     +'td{padding:7px 8px;border:1px solid #ddd;vertical-align:middle}'
     +'.footer{margin-top:20px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:10px}'
     +'.print-btn{margin-top:16px;padding:10px 20px;background:#2d7a4a;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;display:block;width:100%}'
-    +'@media print{.print-btn{display:none}}#player-name-input::placeholder,#player-initial-input::placeholder{color:rgba(200,223,204,.55)}@media(max-width:640px){.modal{max-height:94vh}.modal-bg{padding:6px}}</style></head><body>'
+    +'@media print{.print-btn{display:none}}#player-name-input::placeholder,#player-initial-input::placeholder{color:rgba(200,223,204,.55)}@media(max-width:640px){.modal{max-height:94vh}.modal-bg{padding:6px}}@media(min-width:641px){.minfo-lbl{font-size:11px}.minfo-val{font-size:14px}.modal-latin{font-size:28px}.modal-common{font-size:14px}.modal-famille{font-size:12px}}</style></head><body>'
     +'<h1>🌿 ChloroQuiz — Résultats de session</h1>'
     +'<div class="meta">Code : <strong>'+code+'</strong> &nbsp;·&nbsp; Date : <strong>'+date+'</strong> &nbsp;·&nbsp; '+rows.length+' participant(s)</div>'
     +'<table><thead><tr>'
