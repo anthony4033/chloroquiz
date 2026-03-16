@@ -2020,7 +2020,7 @@ function exportFichePDF(id){
     <span>ChloroQuiz — © Tous droits réservés</span>
     <span>${new Date().toLocaleDateString('fr-FR')}</span>
   </div>
-  window.onload=function(){ window.print(); }<\/script>
+  <script>window.onload=function(){ window.print(); }<\/script>
 </body>
 </html>`;
 
