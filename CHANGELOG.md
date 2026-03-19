@@ -1,0 +1,970 @@
+# ChloroQuiz — Nouveautés & Corrections
+
+---
+
+## v24c — Recherche admin unifiée + CSV encoding (2026-03-18)
+
+### Bug corrigé : encodage CSV
+
+Le BOM `\uFEFF` ajouté pour Excel corrompait les accents sur Android (é → Ã©, à → Ã , – → â→).
+- Suppression du BOM
+- Utilisation de `TextEncoder` pour garantir un UTF-8 pur
+- Compatible Google Sheets Android, Excel PC/Mac, LibreOffice
+
+### Bug corrigé : recherche admin "arbuste" ne trouvait rien
+
+Le champ `data-search` des rows admin n'indexait que `latin + nom + famille`.
+- Ajout de `type`, `feuillage`, `exposition`, `usageAmenagement` dans `data-search`
+- Ajout de `data-id` sur chaque row pour retrouver la plante dans `plants[]`
+
+### Recherche admin = recherche apprenti
+
+Le moteur de recherche multicritère est maintenant extrait en fonction partagée `buildSearchEngine(q)`, utilisée par les deux contextes.
+
+La recherche admin supporte désormais les mêmes fonctionnalités que la bibliothèque apprenti :
+- **Multi-tokens** : `arbuste persistant` → arbuste ET persistant
+- **Contexte fleur/feuillage** : `arbuste fleur bleu` → bleu uniquement dans les champs fleurs
+- **Synonymes couleurs** : `rouge` → bordeaux, carmin, grenat, lie-de-vin…
+- **Sémantique** : `haie` → usageAmenagement, `glauque` → couleurLimbe bleu-vert…
+- **Feuille = feuilles = feuillage** (synonymes)
+
+---
+
+## v24b — Import CSV : normalisation auto + guide formats (2026-03-18)
+
+### Normalisation automatique à l'import
+
+Nouvelle fonction `normalizeCSVPlant()` — les saisies approximatives sont converties vers le format exact attendu par l'app.
+
+**Période de floraison**
+- `mai, juin, juillet` → `Mai – Juin – Juillet`
+- `mai-juillet` ou `mai/juillet` → `Mai – Juillet`
+- Abréviations acceptées : `Avr`, `Sep`, `Oct`…
+- Tri automatique par ordre calendaire
+
+**Hauteur / Largeur adulte**
+- `1-3 m` → `1 m – 3 m`
+- `30-60 cm` → `0.3 m – 0.6 m` (conversion automatique)
+- `200-400 cm` → `2 m – 4 m`
+- Arrondi au palier TAILLES le plus proche (0.1 par 0.1 jusqu'à 1 m, puis entiers)
+
+**Rusticité**
+- `-20/-15°C` ou `-20 – -15` → `-20 / -15°C`
+- `< -30` → `< -30°C`
+- `-12°C` → `-12°C` (valeur unique)
+
+**Feuillage / Exposition**
+- Capitalisation automatique
+- Tirets courts `–` normalisés
+
+### Modèle CSV enrichi
+
+Chaque colonne du modèle contient maintenant les valeurs exactes acceptées dans le hint (ligne 2) :
+- Type végétal : liste complète des 21 types
+- pH : 6 valeurs avec descriptions (Acidophile, Calcicole…)
+- Humidité sol, Structure sol, Exposition : toutes les valeurs possibles
+- Période floraison : les 12 mois avec syntaxe exacte
+- Intérêt ornemental, Usage, Autres intérêts : toutes les options
+
+---
+
+## v24 — Import CSV catalogue végétaux (2026-03-18)
+
+### Nouvelle fonctionnalité : import par tableur
+
+Deux nouveaux boutons dans l'onglet Admin → Catalogue :
+
+**📥 Modèle CSV**
+- Télécharge un fichier CSV prêt à remplir avec toutes les colonnes (36 champs)
+- Ligne 1 : noms de colonnes lisibles (`Nom botanique *`, `Famille botanique`…)
+- Ligne 2 : exemples / hints (`Rosa canina`, `Rosaceae`…)
+- Si le catalogue contient déjà des plantes, elles sont incluses dans le modèle
+- BOM UTF-8 inclus → ouverture directe dans Excel sans problème d'accents
+
+**📤 Importer CSV**
+- Compatible avec les exports Google Sheets (`;`) et Excel (`;` ou `,`)
+- Détection automatique du séparateur
+- Gestion des guillemets et des virgules dans les valeurs
+- Normalisation automatique : `normalizeLatin()` + `normalizeFamille()`
+
+**Prévisualisation avant import**
+- Tableau récapitulatif : chaque plante classée **✨ Nouveau** ou **⚠️ Doublon**
+- Pour les doublons : menu déroulant par ligne — `⏭ Ignorer` ou `✏️ Mettre à jour`
+- Bouton **Annuler** pour abandonner sans rien modifier
+- Bouton **✅ Importer N plante(s)** pour confirmer
+
+**Colonnes du modèle** (36 champs) :
+Nom botanique, Nom commun, Famille, Classe, Type, Feuillage, Rusticité, Exposition, Hauteur, Largeur, Port, Vitesse croissance, pH, Humidité sol, Structure sol, Période floraison, Couleur fleurs, Type inflorescence, Parfum, Intérêt ornemental, Autres intérêts, Usage aménagement, Biodiversité, Couleur limbe, Forme limbe, Texture, Reproduction, Pollinisation, Type taille, Fréquence taille, Particularités, Description, Photo 1–4 (URL)
+
+---
+
+## v23g — Filtres révision ciblée : audit et corrections (2026-03-18)
+
+### Problèmes identifiés et corrigés
+
+**Bug critique — filtre Dimensions** : le filtre utilisait `split('–')` pour lire la valeur stockée, alors que celle-ci utilise `→` comme séparateur interne (`"2→5"` = plantes entre 2 et 5 m). Résultat : `parseFloat` retournait `NaN` et aucune plante n'était filtrée.
+
+**Filtre Couleur fleurs** : amélioré pour comparer couleur par couleur (split sur `,`) au lieu d'un simple `includes()`. Ex : `"Rose"` cible les plantes ayant "Rose" parmi leurs couleurs, pas juste les plantes dont le champ contient la sous-chaîne "rose".
+
+**Catégorie Classe** : ajout d'un fallback sur les 4 valeurs officielles (`Monocotylédone · Dicotylédone · Gymnosperme · Bryophyte`) si le catalogue ne contient pas encore de plantes avec le champ classe renseigné.
+
+### Catégories dynamiques vs statiques
+
+| Catégorie | Source des valeurs |
+|---|---|
+| 🍃 Feuillage | Dynamique — extrait des plantes du catalogue |
+| ☀️ Exposition | Dynamique |
+| 🌿 Type | Dynamique — multi-valeur (split `,`) |
+| 🔬 Famille | Dynamique |
+| 🧬 Classe | Dynamique + fallback 4 valeurs officielles |
+| 🏡 Usage | Dynamique — multi-valeur (split `,`) |
+| 🎨 Couleur fleurs | Dynamique — extrait couleur principale par plante |
+| 📏 Dimensions | Statique — 6 tranches de hauteur (0–0.5 · 0.5–1 · 1–2 · 2–5 · 5–15 · >15 m) |
+| 🌡️ Rusticité | Statique — 5 classes agronomiques |
+
+---
+
+## v23f — Fix intervalles quiz solo (2026-03-18)
+
+### Bug corrigé : intervalles absents en quiz solo
+
+**Cause** : `buildNumericIntervalOptions()` était appliqué dans `buildKnowledgeQuestion()` (sessions multi) mais **pas** dans `buildKQ()` (quiz solo). Le quiz solo utilisait donc les valeurs brutes des plantes du pool comme distracteurs (`"2 – 3 m"`, `"1 – 3 m"`…), produisant des doublons quasi-identiques.
+
+**Fix** : ajout du bloc `NUMERIC_KEYS_SOLO` dans `buildKQ()` — même logique que le multi.
+
+**Résultat pour Osmanthus × burkwoodii (hauteur 2 – 3 m)** :
+- ✅ Avant fix : `2 – 3 m` / `2–3 m` / `1 – 2 m` / `1.5 m – 2.0 m` (doublons, formatage incohérent)
+- ✅ Après fix : `2 – 3 m` / `0.6 – 1 m` / `1.5 – 2 m` / `3.5 – 4.5 m` (4 intervalles distincts et bien espacés)
+
+---
+
+## v23e — Filtres Famille/Classe + Type Spontanée/Indigène/Horticole (2026-03-18)
+
+### Révision ciblée — 2 catégories supplémentaires
+
+| Catégorie | Chips |
+|---|---|
+| 🔬 Famille | Toutes les familles des plantes du catalogue (dynamique) |
+| 🧬 Classe | Monocotylédone · Dicotylédone · Gymnosperme · Bryophyte |
+
+Total : 9 catégories de filtre (Feuillage, Exposition, Type, Famille, Classe, Usage, Couleur fleurs, Dimensions, Rusticité)
+
+### Formulaire fiche végétale — Type de végétal
+
+3 nouvelles valeurs ajoutées en bas de la liste :
+- **Spontanée** — plante qui pousse naturellement sans intervention humaine
+- **Indigène** — plante native de la région ou du pays
+- **Horticole** — variété sélectionnée ou cultivée par l'homme
+
+Mises à jour : `TYPE_OPTIONS`, chips du formulaire, `startQuiz` (filtres), `openFilterCat`, `clearAllFilters`, `qFilter`
+
+---
+
+## v23d — Révision ciblée : 7 catégories (2026-03-18)
+
+### Nouvelles catégories de filtre
+
+| Catégorie | Chips |
+|---|---|
+| 🍃 Feuillage | Caduc · Persistant · Marcescent · Semi-persistant |
+| ☀️ Exposition | Toutes les expositions des plantes du catalogue |
+| 🌿 Type | Tous les types (multi-valeur supporté) |
+| 🏡 Usage | Haie libre · Haie taillée · Massif · Bordure · Couvre-sol · Talus… |
+| 🎨 Couleur fleurs | Blanc · Jaune · Rose · Rouge · Violet · Bleu · Mauve… |
+| 📏 Dimensions | 0–0.5 m · 0.5–1 m · 1–2 m · 2–5 m · 5–15 m · > 15 m |
+| 🌡️ Rusticité | Très rustique (< -25°C) · Rustique · Assez rustique · Peu rustique · Sensible |
+
+- `qFilter` étendu à 7 clés
+- `openFilterCat()` construit dynamiquement les chips selon la catégorie
+- Dimensions et Rusticité utilisent des **intervalles** — les plantes dont la valeur tombe dans la tranche sont sélectionnées via `parseDimensionValue()` et `parseRusticiteValue()`
+- Usage et Couleur fleurs : filtrage sur valeurs multi (la plante doit contenir la valeur cherchée)
+- `clearAllFilters()` et `toggleFilterChip()` mis à jour pour les 7 clés
+
+---
+
+## v23c — Révision ciblée redessinée (2026-03-18)
+
+### Révision ciblée — système accordéon par catégorie
+
+**Avant** : tous les chips de toutes les catégories affichés en permanence (encombrant).
+
+**Après** : 3 boutons de catégorie → clic → les chips de cette catégorie apparaissent dessous.
+
+- Boutons catégories : 🍃 Feuillage · ☀️ Exposition · 🌿 Type
+- Par défaut tout est fermé = pas de filtre actif (= "Tous")
+- Quand un filtre est sélectionné → badge vert affiché sur le bouton catégorie
+- Bouton **✕ Réinitialiser** apparaît dès qu'un filtre est actif, disparaît quand tout est "Tous"
+- Cliquer à nouveau sur une catégorie ouverte la referme
+
+### Autres corrections
+- `selectLevel()` corrigé pour prendre en compte les 4 niveaux (lv4 n'était pas mis à jour visuellement)
+
+---
+
+## v23b — Corrections affichage fiches et photos (2026-03-18)
+
+### Bug labels collés — corrigé partout
+- `FamilleAstéraceae`, `TypeVivace herbacée`, `ComportementPersistant` → labels et valeurs désormais séparés dans toutes les vues
+- Correction appliquée en **styles inline** (bulletproof — ne dépend plus du chargement du CSS) sur :
+  - `launchComparisonFull` (comparaison complète)
+  - `showFicheComplete` (fiche complète)
+  - `openModal` (modale simple et desktop)
+- Label `"Comportement"` → `"Feuillage"` dans la section Feuillage de la comparaison complète
+
+### Tag résistance sécheresse retiré des cards
+- `sechBar()` supprimé des cards de la bibliothèque des fiches
+- Remplacé par le tag `💧 Humidité` cohérent avec le reste de l'application
+
+### Photos — `object-fit:contain` sur toutes les vues
+- Avant : `object-fit:cover` recadrait l'image et coupait le végétal (port, fleurs basses, racines)
+- Après : `object-fit:contain` + fond sombre `#071610` — le végétal est visible en entier
+- Appliqué sur : grille bibliothèque, modale simple, modale mobile (slide), comparaison côte à côte
+- **Fiche complète** : photo principale grande (max 340 px) + miniatures cliquables si plusieurs photos
+
+### CSS
+- `.minfo` : `display:flex;flex-direction:column` ajouté
+- `.cmp-row/.cmp-lbl/.cmp-val` : classes créées pour la comparaison complète
+- `.fiche-img` : `object-fit:contain;background:#071610;border-radius:10px 10px 0 0`
+- `.modal-img` : `height:220px;object-fit:contain;background:#071610`
+- `.modal-img-full` : `object-fit:contain;background:#071610`
+- `.cmp-img` : `object-fit:contain;background:#071610`
+
+---
+
+## v23 — Templates N4 enrichis, questions contraire, recherche sémantique (2026-03-17)
+
+### Templates N4 — 16 scénarios de chantier (niveau Technique)
+
+- Ajout de 8 nouveaux templates utilisant les champs v17 : **port**, **humidité du sol**, **structure du sol**, **couleur des fleurs**, **usage aménagement**, **hauteur adulte + période**
+- `resistanceSech` remplacé par `humidite` dans tous les templates
+- Format migré vers `{t: fn, f: [champs]}` : chaque template connaît ses champs requis
+- Les templates dont les champs ne sont pas renseignés sur la plante sont exclus automatiquement
+- Fonctionne pour le quiz solo (niveau 4) et les sessions multijoueur
+
+### Questions "contraire" — nouveau type 🚫
+
+7 templates de questions inverses (Quelle plante NE convient PAS à… ?) :
+- Exposition, Rusticité, Humidité du sol, Feuillage, Période de floraison, Port, pH
+- Probabilité d'apparition : **15%** aux niveaux 2, 3 et multi
+- La "bonne réponse" est le végétal qui **ne correspond pas** aux critères affichés
+- Les 3 distracteurs sont des végétaux qui **conviendraient** (pièges plausibles)
+- Affiché avec le label `🚫 Question contraire` dans la phase 2
+
+### Recherche sémantique — `SEMANTIC_CATEGORIES`
+
+~30 mots-clés reconnus qui ciblent les bons champs :
+
+| Mot-clé | Champs ciblés |
+|---|---|
+| `haie` | usageAmenagement (haie libre, taillée, champêtre…) |
+| `persistant` | feuillage + interetOrnemental |
+| `caduc`, `marcescent` | feuillage |
+| `arbre`, `arbuste`, `conifere`… | type |
+| `calcaire`, `acide` | ph |
+| `humide`, `sec`, `drainant` | humidite, structureSol |
+| `ombre`, `soleil`, `mi-ombre` | exposition |
+| `mellifere`, `aromatique`, `comestible`… | autresInterets, biodiversite |
+| `parfume` | parfum, couleurFleurs, autresInterets |
+| `retombant`, `colonnaire` | port |
+| `aquatique`, `berge` | usageAmenagement, humidite |
+
+Exemple : `haie persistante` → filtre usageAmenagement contenant "haie" ET feuillage="Persistant"
+
+---
+
+## v22b — Dictionnaire couleurs complet (2026-03-17)
+
+### Recherche multicritère — nuances de couleurs
+
+Le moteur de recherche reconnaît désormais les **nuances pour toutes les couleurs**.
+
+| Couleur recherchée | Nuances reconnues |
+|---|---|
+| `rouge` | bordeaux, carmin, cramoisi, vermillon, écarlate, grenat, framboise, lie-de-vin, brique, terracotta, rouille, cuivre, brun-rouge, corail, cerise, rubis |
+| `orange` | abricot, ambre, rouille, terracotta, cuivre, brique, mandarine, saumon foncé, ocre, fauve |
+| `jaune` | or, doré, paille, citron, champagne, crème, ivoire, vert-jaune, jaune orangé, soufre |
+| `blanc` | crème, ivoire, nacré, argenté, blanc rosé, blanchâtre |
+| `rose` | rosé, saumon, fuchsia, magenta, rose pâle/vif/foncé, incarnat, framboise clair |
+| `violet` | mauve, lilas, lavande, améthyste, pourpre, prune, aubergine, bleu-violet, violine |
+| `bleu` | azur, indigo, saphir, glauque, bleu-vert, vert bleuté, gris-bleu, turquoise, pruineux, cendré |
+| `vert` | émeraude, jade, bronze, chartreuse, olive, kaki, vert-gris, vert-jaune |
+| `brun` | marron, chocolat, noisette, acajou, roux, cuivré, bronze, cannelle |
+| `gris` | argenté, gris-vert, gris-bleu, cendré, ardoise, plombé |
+| `noir` | brun-noir, noir-pourpre, très foncé |
+
+- `COLOR_SYNONYMS` — dictionnaire JS complet (~60 familles de couleurs)
+- `normalizeColorTok()` — normalise pluriels et accords (bleus→bleu, vertes→vert…)
+- `COLOR_KEYS` — Set de tous les tokens reconnus comme couleurs
+- Le contexte fleur/feuillage continue de fonctionner pour toutes les couleurs
+
+---
+
+## v22 — 4 niveaux, recherche intelligente, humidité (2026-03-17)
+
+### Quiz : restructuration des niveaux
+
+| Niveau | Nom | Critères |
+|--------|-----|----------|
+| 1 | 🌱 **Débutant** | Photo · Type végétal · Feuillage · Rusticité · Exposition · Hauteur · Largeur · Floraison · Couleur fleurs |
+| 2 | 🎓 **Intermédiaire** | N1 + pH · Humidité sol · Structure sol · Port · Vitesse croissance · Type taille · Intérêt ornemental · Autres intérêts · Usage |
+| 3 | 🔬 **Expert** | N2 + Famille · Classe · Couleur/Forme/Texture feuillage · Reproduction · Pollinisation · Biodiversité · Particularités · Fréquence taille |
+| 4 | 🏗️ **Technique** | Mise en situation chantier (choix d'un végétal selon critères) |
+
+- `KFIELDS_N1`, `KFIELDS_N2`, `KFIELDS_N3` — 3 tableaux de critères cumulatifs
+- `buildKQ` et `buildKnowledgeQuestion` mis à jour pour router vers le bon tableau selon le niveau
+- **Résistance sécheresse** supprimée de tous les critères de quiz → remplacée par **Humidité du sol**
+- Sélecteur 4 boutons dans le quiz solo et dans le multi (admin)
+- CSS `lv4` (bleu cyan) ajouté dans `chloroquiz.css`
+- Filtre classement mis à jour : `lv1` / `lv2` / `lv3` / `lv4`
+
+### Recherche multicritère intelligente (bibliothèque)
+
+- **Contexte fleur** : `arbuste fleur bleu` → recherche le bleu uniquement dans les champs fleurs (couleurFleurs, inflorescence…), pas dans le feuillage
+- **Contexte feuillage** : `arbuste feuillage bleu` → recherche le bleu uniquement dans les champs feuillage
+- **Synonymes bleu/glauque** : `bleu` sur feuillage → couvre aussi glauque, bleu-vert, vert bleuté, gris-bleu, argenté, cendré, pruineux
+- **feuille = feuilles = feuillage** : expandToken() normalise ces synonymes
+- **Sans résultat** : affichage d'un message discret `« Aucune fiche ne correspond à "..." »` sans widget vide
+- Liste `COLOR_WORDS` de toutes les couleurs reconnues pour le routage contextuel
+
+---
+
+## v21 — Quiz : intervalles pour dimensions et rusticité (2026-03-17)
+
+### Nouveau comportement pour les questions numériques
+Les champs `hauteurAdulte`, `largeurAdulte` et `rusticite` génèrent désormais des **intervalles** dans les propositions au lieu de valeurs exactes.
+
+**Dimensions (hauteur/largeur adulte)**
+- La valeur exacte de la plante est convertie en intervalle centré (ex: `1 – 2 m` → correct : `1 – 2 m`, faux : `0.2 – 0.8 m`, `0.7 – 1.5 m`, `2 – 2.5 m`)
+- La largeur de l'intervalle est proportionnelle à la valeur : ±0.1 m pour < 0.5 m, ±0.3 m pour 1–3 m, ±1.5 m pour 8–20 m, etc.
+- Les distracteurs sont des intervalles réalistes à 35 %, 65 %, 160 % et 250 % de la valeur
+
+**Rusticité**
+- Intervalles de ±5°C arrondis aux multiples de 5°C (ex: `-10 / -5°C` → correct : `entre -15°C et -5°C`, faux : `entre -20°C et -10°C`, `< -30°C`, `entre -5°C et 0°C`)
+- Cas extrêmes gérés : `< -30°C` reste `< -30°C`, valeurs proches de 0°C renvoient `entre -5°C et 0°C`
+- Pour les valeurs très froides (≤ -28°C), les distracteurs sont décalés vers le chaud pour rester distincts
+
+### Nouvelles fonctions
+- `parseDimensionValue(str)` — extrait le milieu numérique d'une plage ou valeur unique en mètres
+- `parseRusticiteValue(str)` — extrait le milieu numérique d'une plage ou valeur de température
+- `formatDimensionInterval(midVal, halfStep)` — formate un intervalle en mètres
+- `formatRusticiteInterval(midVal, halfStep)` — formate un intervalle en °C (multiples de 5)
+- `buildNumericIntervalOptions(value, key)` — génère 4 intervalles (1 correct + 3 distracteurs)
+
+### Impact
+- S'applique aux quiz solo **et** aux sessions multijoueur (même fonction `buildKnowledgeQuestion`)
+- Si la valeur n'est pas parseable, comportement antérieur conservé (valeur exacte)
+
+---
+
+## v20 — Comparaison Simple/Complète, bug famille (2026-03-17)
+
+### Bug famille botanique corrigé
+- Suppression du `oninput` sur le champ Famille botanique (même cause que le bug latin)
+- La normalisation (`Rosaceae` ← `rosacees`, `Lamiaceae` ← `lamiacées`) se fait uniquement `onblur`
+- Fin du bug où le suffixe était dupliqué pendant la saisie (ex. `Rosaceaaceae`)
+
+### Comparaison — mode Simple / Complet
+- La barre de comparaison affiche deux boutons : **📋 Simple** (défaut) et **📄 Complet**
+- **📋 Simple** : comparaison existante avec les champs essentiels + code couleur vert (identique) / orange (différent)
+- **📄 Complet** : nouvelle fonction `launchComparisonFull(id1, id2)` — modal avec **7 sections** et tous les champs v17 (Identité, Morphologie, Feuillage, Floraison, Milieu & sol, Entretien, Usage & biodiversité)
+- Compteur de différences affiché en en-tête de la vue complète
+- Bouton **📄 Vue complète** dans la modale simple → bascule vers vue complète
+- Bouton **← Vue simple** dans la modale complète → retour vue simple
+- `compareType` variable globale (`"simple"` | `"complet"`) réinitialisée à chaque ouverture du mode comparaison
+
+---
+
+## v19 — Nom latin, recherche multicritère, stats temps (2026-03-17)
+
+### Nom botanique — saisie corrigée
+- Suppression du `oninput` sur le champ latin qui bloquait la frappe des espaces
+- Normalisation (majuscule genre, minuscules épithète) déplacée sur `onblur` uniquement
+- **Trinôme** supporté : `Prunus avium 'Burlat'`, `Rosa canina subsp. corymbifera` ✅
+- **Hybrides `×`** : `Rosa × canina`, `Rosa x canina`, `Rosaxcanina` tous acceptés
+- Placeholder mis à jour pour illustrer ces cas
+
+### Quiz dictée — tolérance `×`
+- Nouvelle fonction `normalizeLatinForCompare(s)` : normalise `x`/`×` avec ou sans espaces avant comparaison
+- `Elaeagnus × ebbingei`, `Elaeagnus x ebbingei`, `Elaeagnus xebbingei` → toutes reconnues comme bonne réponse
+
+### Recherche multicritère dans la bibliothèque
+- Recherche sur **tous les champs** de la plante (latin, nom, famille, type, classe, feuillage, couleur fleurs, couleur limbe, forme, texture, port, exposition, pH, humidité, taille, usage, biodiversité, contraintes, etc.)
+- **Recherche multi-mots** : chaque mot doit être présent quelque part → `arbrisseau glauque` ✅, `fleur bleu` ✅
+- Nouvelle fonction interne `plantText(p)` qui concatène tous les champs pour la recherche
+
+### Statistiques — heure de début
+- **Solo** : `startTime` enregistré dans l'objet score au démarrage du quiz
+- Historique par joueur : chaque partie affiche date + heure + score
+- **Multi** : date + heure extraites de `created_at` de la session Supabase
+- Historique multi : 5 dernières sessions avec heure de début et score
+
+### Quiz multi — vue joueur pendant la partie
+- Suppression du mini-classement entre les questions (les autres joueurs n'étaient plus visibles)
+- Remplacé par un indicateur de **progression personnelle** uniquement : `Prénom · ✅ 3/5 · 60%`
+- Le classement complet reste affiché à la **fin de partie** (inchangé)
+- **Vue admin** (`renderSessionMonitor`) : aucun changement, progression temps réel de tous les joueurs toujours visible
+
+---
+
+## v18 — Formulaire, fiches, stats, quiz ciblé (2026-03-17)
+
+### Formulaire admin — champs modifiés
+- **Rusticité** → multi-select chips (9 intervalles de `< -30°C` à `+5°C`, sélections discontinues possibles)
+- **pH du sol** → multi-select (plusieurs valeurs cochables simultanément)
+- **Structure du sol** → multi-select
+- **Humidité du sol** → multi-select
+- **Type de taille** → multi-select
+- **Résistance sécheresse** → champ retiré du formulaire (remplacé fonctionnellement par Humidité du sol) ; la valeur reste stockée si déjà renseignée
+- **Autres intérêts** → réduit à 5 valeurs : Médicinale, Feuillage aromatique, Comestible / Fruitière, Fixatrice d'azote, Résistante à la pollution
+- **Toggle inflorescence** → "Fleurs simples" désormais sélectionné par défaut et affiché en premier ; choix mutuellement exclusif avec Inflorescence
+- **Vivace herbacée** → renommé **Vivace**
+- **Classe botanique** ajoutée (single-select) : Monocotylédone, Dicotylédone, Gymnosperme, Bryophyte
+- **Boutons Annuler / Enregistrer** dupliqués en haut du formulaire (en plus de ceux déjà en bas)
+
+### Fiche végétale complète
+- Bouton **📋 Fiche complète** visible dans chaque modale (simple et desktop), à côté du bouton PDF
+- Nouvelle fonction `showFicheComplete(id)` : modal étendu 7 sections (Identité, Morphologie, Floraison, Milieu, Entretien, Usage, Biodiversité)
+- **Classe** affichée dans l'en-tête de la fiche complète (à côté du feuillage)
+- Bouton **← Fiche simple** pour revenir depuis la fiche complète
+
+### Statistiques
+- Cartes apprentis solo : heure de début affichée sur la dernière partie
+- Ligne de progression détaillée : chaque partie avec date + heure + score
+- Cartes apprentis multi : date + heure de la dernière session + historique des 5 dernières sessions
+- `startTime` ajouté à l'objet score sauvegardé
+
+### Quiz ciblé (🎯)
+- Bouton **🎯 Quiz ciblé** affiché sur l'écran de fin de quiz si des erreurs existent (ex. "🎯 Quiz ciblé (7 erreurs)")
+- Lance directement `startQuiz(true)` avec les végétaux sur lesquels l'apprenti a fait des erreurs
+
+### Bug fix
+- `sbDelete` : ajout du header `Prefer: return=minimal` — corrige les suppressions de sessions multi qui échouaient silencieusement
+- Bouton **⚖️ Comparer 2 plantes** repositionné à droite de la ligne dans la bibliothèque
+
+---
+
+## v17b — Éditeur de glossaire dans l'admin (2026-03-17)
+
+### Nouvelle fonctionnalité
+Onglet **📖 Glossaire** dans le panel admin permettant de gérer les définitions botaniques
+sans toucher au code source.
+
+### Ce que tu peux faire
+- **Modifier** n'importe quelle définition intégrée (badge `MODIF.` orange)
+- **Ajouter** un terme entièrement nouveau (badge `PERSO` vert)
+- **Réinitialiser** une définition modifiée (🗑️ = retour à la valeur intégrée)
+- **Supprimer** un terme personnalisé
+- **Rechercher** en temps réel parmi tous les termes
+- Les modifications s'affichent immédiatement dans les glyphes `?` du formulaire végétal
+
+### Stockage
+- **localStorage** : disponible immédiatement, fonctionne hors-ligne
+- **Supabase** (si cloud configuré) : synchronisé sur tous les appareils
+
+### Table Supabase à créer (SQL Editor)
+```sql
+create table floralab_glossaire (
+  key text primary key,
+  titre text not null,
+  definition text not null,
+  exemple text
+);
+```
+
+### Fonctions ajoutées (chloroquiz.js)
+- `loadGlossaire()` — chargement au démarrage (localStorage + Supabase)
+- `saveGlossEntry(key, titre, definition, exemple)` — création/modification
+- `deleteGlossEntry(key)` — suppression
+- `renderGlossList([filter])` — rendu de la liste avec badges
+- `filterGlossList(v)` — filtre temps réel
+- `openGlossForm(key|null)` — formulaire modal
+- `submitGlossForm()` — validation et sauvegarde
+- `confirmDeleteGloss(key, isCustom)` — suppression avec confirmation
+- `showFormGloss(key)` — mis à jour pour consulter `runtimeGloss` en priorité
+
+### Variables
+- `runtimeGloss` — objet en mémoire fusionnant localStorage et Supabase
+- `SK_GLOSS = 'cq_glossaire'` — clé localStorage
+
+---
+
+## v17 — Formulaire admin enrichi (2026-03-17)
+
+### Nouveaux champs (formulaire admin uniquement)
+- **Port / Silhouette** : chips single-select (8 options avec glyph glossaire)
+- **Vitesse de croissance** : Lente / Moyenne / Rapide
+- **Comportement saisonnier** : chips (remplace le <select> feuillage) avec glossaire
+- **Couleur du limbe** : color swatches végétaux (18 teintes + dégradés panachés)
+- **Forme du limbe** : chips single-select (20 formes botaniques, toutes avec glyph)
+- **Longueur / Largeur du limbe** : picker cm `<1 cm` … `>40 cm`, 1er ou 2 clics = valeur ou plage
+- **Longueur du pétiole** : picker mm `Sessile` … `>60 mm`
+- **Couleur du pétiole** : color swatches (11 teintes)
+- **Texture du feuillage** : chips (Fine, Moyenne, Grossière, Coriace, Épineuse)
+- **Exposition** : chips multi-select Ombre / Mi-ombre / Soleil (combine automatiquement en "X – Y – Z")
+- **Parfumé** / **Intérêt esthétique** : chips Oui / Non
+- **Reproduction** : Hermaphrodite / Monoïque / Dioïque / Polygame (glyph)
+- **Pollinisation** : Entomogame / Anémogame / Zoogame / Hydrogame (glyph)
+- **Inflorescence** : toggle → révèle type + dim. inflo + dim. fleur (3 colonnes)
+- **Particularités** : chips multi (Drageonnant, Stolonifère, Mellifère, Fructification, Écorce, Automnal)
+- **Humidité du sol** : Sec / Frais / Humide / Détrempé (glyph)
+- **pH du sol** : 6 niveaux avec glyphes (Acidophile → Calcicole → Indifférent)
+- **Structure du sol** : Drainant / Équilibré / Lourd / Indifférent (glyph)
+- **Type de taille** : 5 options avec glyphes
+- **Fréquence de taille** : Annuelle / Tous les 2–3 ans / Rare
+- **Usage paysager** : 17 usages avec glyph (remplace et enrichit l'ancien champ)
+- **Biodiversité** : 11 options ressources alimentaires + habitat (glyph)
+- **Contraintes & alertes** : 12 options santé + pratiques (glyph)
+
+### Nouvelles fonctions JS
+- `_renderGPicker()`, `renderCmPicker()`, `renderPetiolePicker()`, `clickGP()`, `updateGP()` — pickers génériques
+- `renderLeafColorPicker()`, `toggleLeafColor()` — color swatches feuillage/pétiole
+- `fChip()`, `setSFChip()`, `updateExpoChips()` — gestion chips formulaire
+- `showFormGloss(key)` — overlay glossaire (~70 termes botaniques)
+- `checkLatinField()`, `checkFamilleField()` — validation + erreurs inline
+- `toggleInfloDetail()` — toggle section inflorescence
+
+### Nouvelles données JS
+- `TAILLES_CM` (42 valeurs, `<1 cm` à `>40 cm`)
+- `TAILLES_PETIOLE` (32 valeurs, `Sessile` à `>60 mm`)
+- `COULEURS_LIMBE` (18 teintes végétales + dégradés panachés)
+- `COULEURS_PETIOLE` (11 teintes)
+- `FORM_GL` — glossaire botanique complet (~70 définitions)
+- `cmPickers`, `ptPickers` — état des pickers cm/pétiole
+
+### CSS (index.html — <style> injecté)
+- `.fg-section-title` — titres de sections colorées dans le formulaire
+- `.glyph` — bouton `?` ouvrant le glossaire
+- `.color-grid` / `.color-swatch` / `.color-display` — color picker végétal
+- `.size-hint` / `.size-display` — affichage pickers taille
+- `.type-display` — affichage résumé chips multi-select
+
+### savePlantForm
+Tous les nouveaux champs sont sauvegardés : port, vitesseCroissance, couleurLimbe, formeLimbe, longueurLimbe, largeurLimbe, longueurPetiole, couleurPetiole, texture, parfum, interetEsthetique, reproduction, pollinisation, typeInflorescence, dimInflo, dimFleur, particularites, humidite, structureSol, typeTaille, frequenceTaille, biodiversite, contraintes.
+
+---
+
+## Version 16 — 17/03/2026
+- Nouveau : bouton **✕ Supprimer** sur chaque carte apprenti (quiz solo) dans les Statistiques — efface tous ses scores et erreurs
+- Nouveau : bouton **✕ Supprimer** sur chaque ligne de session dans la section multijoueur des Statistiques — efface la session et tous ses joueurs
+- Nouveau : **section "Sessions multijoueur"** dans les Statistiques — cartes par apprenti (sessions, meilleur/pire %, moyenne, barre de progression) + liste des sessions avec date, niveau, podium
+- Correction : la carte **"Scores enregistrés"** dans l'admin affiche désormais le décompte séparé **solo / multi** (ex. : "12 solo · 5 multi")
+
+---
+
+## Version 14 — 17/03/2026
+- Correction : bouton **Fermer** manquant sur la page d'impression du comparatif
+- Amélioration : la page comparatif propose maintenant deux boutons — "🖨️ Imprimer / PDF" et "✕ Fermer" — avant de lancer l'impression (l'impression ne se lance plus automatiquement à l'ouverture)
+
+---
+
+## Version 13 — 16/03/2026
+- Correction : mode dictée bloqué en session multijoueur (impossible de passer à la question suivante)
+- Correction : impression du comparatif tronquée sur 2 pages
+- Nouveau : jusqu'à **4 photos par plante** dans les fiches
+- Amélioration : les photos sont automatiquement compressées à l'upload (moins de données, chargement plus rapide)
+
+---
+
+## Version 12 — 16/03/2026
+- Nouveau : bouton **Imprimer / PDF** dans la fenêtre de comparaison de 2 plantes (côte à côte, avec code couleur vert/jaune)
+
+---
+
+## Version 11 — 16/03/2026
+- Amélioration : la page Statistiques se **rafraîchit automatiquement** toutes les 10 secondes — les quiz interrompus par les élèves apparaissent sans action de l'admin
+- Amélioration : l'heure du dernier rafraîchissement est affichée discrètement
+
+---
+
+## Version 10 — 16/03/2026
+- Correction : les quiz arrêtés par les élèves n'apparaissaient pas chez l'administrateur (les données restaient sur l'appareil de l'élève)
+- Correction : le mode dictée ne proposait jamais de questions de dictée malgré l'option cochée
+
+---
+
+## Version 9 — 16/03/2026
+- Correction : la section "Quiz interrompus" n'apparaissait pas dans les statistiques si aucun quiz n'avait encore été arrêté
+- Amélioration : les statistiques affichent maintenant le total des parties terminées et interrompues, ainsi que le détail par élève
+
+---
+
+## Version 8 — 16/03/2026
+- Nouveau : **numéro de version** affiché à côté du logo (cliquable pour voir les nouveautés)
+- Nouveau : bouton **⏹ Arrêter** pendant le quiz — retour à l'accueil avec confirmation. Le score partiel est visible dans les statistiques admin mais pas dans le classement
+
+---
+
+## Version 7 — 16/03/2026
+- Nouveau : **comparaison côte à côte** de 2 plantes — accessible via "⚖️ Comparer 2 plantes" dans les Fiches. Les valeurs identiques s'affichent en vert, les différences en orange
+- Nouveau : ce fichier de nouveautés, accessible depuis le badge de version
+
+---
+
+## Version 6 — 16/03/2026
+- Correction : impression de la fiche végétal non fonctionnelle
+- Correction : les fiches végétaux n'étaient pas triées par ordre alphabétique
+
+---
+
+## Version 5 — 16/03/2026
+- Nouveau : **vérification de l'écriture du nom latin** en mode dictée (majuscule au genre, minuscules pour l'espèce). Un message explicatif s'affiche en cas d'erreur de casse
+- Amélioration : notation dictée — 0,5 pt au niveau 1 si bonne réponse mais mauvaise casse, 0 pt aux niveaux 2 et 3
+- Amélioration : le formulaire d'ajout de plante occupe tout l'écran sur mobile
+- Amélioration : catalogue trié par ordre alphabétique
+- Amélioration : le nom latin est automatiquement mis en forme à la saisie (Genre Espèce)
+- Correction : décalage du numéro de question affiché en session multijoueur
+- Correction : la page Statistiques est désormais réservée au formateur
+
+---
+
+## Version 4 — 16/03/2026
+- Correction : impossible de sauvegarder une fiche végétal (bouton Enregistrer inaccessible)
+- Correction : sur mobile, décocher un critère ne se voyait pas visuellement
+- Correction : le formulaire d'ajout de plante dépassait de l'écran sur mobile
+
+---
+
+## Version 3 — 16/03/2026
+- Nouveau : **barre de navigation** fixe en bas de l'écran sur mobile (Accueil, Quiz, Fiches, Classement, Admin)
+- Amélioration : un indicateur de chargement apparaît lors de la connexion
+- Correction : la carte "Rejoindre une session" s'affichait mal sur l'accueil
+
+---
+
+## Versions 1 & 2 — 14/03/2026
+- Lancement de ChloroQuiz : quiz végétaux, fiches, classement, mode multijoueur, administration, export PDF, mode dictée, révision des points faibles
+- Séparation en fichiers distincts (HTML / CSS / JS) pour une maintenance plus facile
+- Nouveau : confirmation avant suppression d'une plante
+- Nouveau : vibration lors d'une mauvaise réponse (mobile)
+- Nouveau : message "aucun résultat" avec bouton pour effacer la recherche
+- Amélioration : filtres du classement plus visibles
+
+---
+
+## v24d — Fix swipe modal fiche végétale (2026-03-18)
+
+### Bug corrigé : impossible de revenir à la page photos depuis la description
+
+**Cause** : les handlers tactiles `touchstart/touchmove/touchend` étaient tous en `{passive:true}`. Sur la page 2 (description avec scroll vertical), le navigateur mobile interprétait tout mouvement comme un scroll vertical et consommait le touch avant que le swipe horizontal ne soit détecté. Résultat : swipe gauche → droite impossible depuis la page description.
+
+**Fix** : détection de l'intention du geste dès les 8 premiers pixels de déplacement :
+- Mouvement majoritairement **horizontal** → `preventDefault()` bloque le scroll, le swipe fonctionne → retour page photos ✅
+- Mouvement majoritairement **vertical** → scroll de la description inchangé ✅
+
+Le `touchmove` est passé en `{passive:false}` uniquement pour les swipes horizontaux confirmés.
+
+---
+
+## v25 — Mes végétaux (fiches personnelles apprenti) (2026-03-18)
+
+### Nouvelle fonctionnalité : onglet "🌱 Mes végétaux"
+
+Nouvel onglet dans la navigation (entre Fiches et Classement) accessible à tous les apprentis.
+
+### Stockage local et isolation
+- Les fiches sont stockées dans le `localStorage` de l'appareil, sous la clé `cq_myplants_v1_Prenom_AB.`
+- Jamais envoyées automatiquement à l'admin ou à un autre utilisateur
+- Chaque apprenti a ses propres fiches, isolées par son prénom + initiales
+
+### Formulaire complet
+- Même formulaire que l'administrateur (tous les champs v17)
+- Bouton **+ Nouvelle fiche** + **✏️ Modifier** + **🗑 Supprimer**
+- Les fiches perso ne touchent pas au catalogue admin
+
+### Code de partage unique
+- Chaque apprenti a un **code 6 caractères** (ex: `AB3X7K`) généré une fois, persistant
+- Visible en haut de la page, cliquable pour copier
+- Ce code est différent du code de session multijoueur
+
+### Partage entre apprentis (et vers admin)
+- **Partage direct** : saisir le code du destinataire → fiche envoyée via Supabase en statut `pending`
+- **Export fichier** : exporte un `.cqp.json` à envoyer manuellement (WhatsApp, email…)
+- **Import fichier** : charger un `.cqp.json` reçu
+
+### Système d'approbation
+- Toute fiche reçue reste en statut `pending` jusqu'à action du destinataire
+- Notification `📬 N fiche(s) reçue(s) en attente` avec bouton d'accès
+- Pour chaque fiche : **✅ Accepter** (ajout à sa collection) ou **✕ Refuser** (suppression)
+- L'admin utilise le même système : reçoit les fiches comme n'importe quel autre destinataire
+
+### Table Supabase requise
+```sql
+create table floralab_plant_shares (
+  id bigserial primary key,
+  sender_name text, sender_share_code text,
+  recipient_code text, plant jsonb,
+  status text default 'pending',
+  created_at timestamptz default now()
+);
+alter table floralab_plant_shares enable row level security;
+create policy "public_all_shares" on floralab_plant_shares for all using (true) with check (true);
+```
+
+---
+
+## v25b — Mes végétaux : sauvegarde/restauration locale (2026-03-18)
+
+### Problème adressé
+`localStorage` peut être effacé si l'apprenti vide les données du site ou change d'appareil.
+
+### Solution : export/import manuel
+
+**💾 Sauvegarder mes fiches**
+- Télécharge un fichier `mes_vegetaux_prenom_ab_YYYY-MM-DD.json`
+- L'apprenti le garde dans ses photos ou son dossier téléchargements
+- Contient toutes ses fiches + son identité + la date
+
+**📂 Restaurer**
+- Charge un fichier `.json` de sauvegarde précédent
+- Confirmation avant écrasement avec affichage du nombre de fiches et de la date
+- Le localStorage est immédiatement mis à jour
+
+### Conseil affiché
+Un toast `"💾 Sauvegarde téléchargée — garde ce fichier précieusement !"` rappelle à l'apprenti l'importance de conserver ce fichier.
+
+---
+
+## v26 — Brouillons admin, Niveau Découverte, Recherche type (2026-03-18)
+
+### Fiches admin en attente (brouillons)
+- Nouveau bouton **📋 Brouillon** dans le formulaire de création (en haut et en bas)
+- Les brouillons sont stockés en `localStorage` (clé `cq_drafts_v1`) — jamais envoyés à Supabase automatiquement
+- Section **📋 Brouillons (N)** en tête du catalogue admin, distincte du catalogue publié
+- Par brouillon : ✏️ Modifier · 📤 Publier · 🗑 Supprimer
+- **📤 Publier** → confirmation → ajout au catalogue Supabase
+- Ne s'applique qu'à la **création** — la modification d'une fiche existante reste directe
+- IDs brouillons ≥ 90000 (jamais en collision avec le catalogue)
+
+### Niveau Découverte (N0)
+- Nouveau niveau avant le N1 Débutant sur l'écran de démarrage
+- Badge bleu **DÉCOUVERTE**, icône 👀
+- Questions exclusivement : **photo → choisir le bon nom commun parmi 4 propositions**
+- Aucune connaissance botanique requise — idéal pour les premiers contacts avec les végétaux
+- Fonctionne avec tous les filtres de révision ciblée et les types de questions
+
+### Recherche multicritère — correctifs
+- **Type de végétal prioritaire** : si le token saisi correspond exactement à un type connu (Arbuste, Arbre, Arbrisseau, Vivace, Conifère, Bambou…), la recherche cible uniquement le champ `type` — plus de faux positifs sur les noms communs (ex: "Arbre aux papillons")
+- Fonctionne dans la bibliothèque apprenti ET dans l'admin
+- `TYPE_OPTIONS` utilisé comme référence complète des 21 valeurs de type
+
+---
+
+## v26b — Fix Niveau Découverte + bouton Refresh (2026-03-18)
+
+### Bug corrigé : Niveau Découverte non affiché
+Le patch v26 ciblait un ancien format HTML des cartes de niveau. Le bon format a été identifié et la carte Niveau 0 est maintenant insérée correctement en pleine largeur au-dessus des 4 autres niveaux.
+
+### Bouton 🔄 Actualiser
+Bouton ajouté dans la barre de navigation en haut à droite, à gauche de Déconnexion. Utilise `location.reload(true)` — force le rechargement depuis le serveur (pas depuis le cache). Utile quand l'appli est installée en PWA sur PC ou mobile et que les mises à jour ne s'appliquent pas automatiquement.
+
+---
+
+## v26c — Police Nunito + noms botaniques en italique (2026-03-18)
+
+### Police d'écriture — meilleure lisibilité
+- Corps du texte global : **DM Sans → Nunito** (police humaniste, beaucoup plus lisible sur écran)
+- Questions de quiz : Nunito 22px (au lieu de Playfair 28px — plus lisible, moins fatiguant)
+- Propositions de réponse (qopt) : Nunito 16px avec meilleur interlignage
+- Noms communs dans les fiches : Nunito 13-14px, légèrement plus grand et plus visible
+
+### Noms botaniques automatiquement en italique
+- Nouvelle fonction `italLatin(name)` : applique les règles de nomenclature botanique internationale
+- Genre : majuscule · Épithète spécifique : minuscules · Tout en italique
+- Les × (hybrides) et les cultivars entre '' ne sont pas en italique
+- Appliqué partout : fiches card, fiches detail, modales, admin, comparaison, Mes végétaux — 20 occurrences
+
+### Noms botaniques dans les questions de quiz
+- Le nom latin dans les questions (déjà en `<em>`) s'affiche en **Playfair Display italic** + couleur ambre — très distinctif
+
+---
+
+## v26d — Fix recherche type vide, dictée cultivar N1/N2, notice (2026-03-18)
+
+### Bug corrigé : recherche "arbuste" → plantes sans type
+Cause : `tok.includes('')` retourne toujours `true` en JavaScript. Une plante avec le champ `type` vide matchait tous les tokens de type (arbuste, arbre, vivace…). Fix : les valeurs vides sont filtrées avant la comparaison avec `.filter(Boolean)`.
+
+### Dictée N1/N2 : cultivars et variétés ignorés
+- En mode dictée au niveau 1 et 2, seuls **Genre + épithète spécifique + hybride (×)** sont demandés
+- Les cultivars (`'Burlat'`, `'Golden King'`…) et rangs infraspécifiques (`var.`, `subsp.`, `f.`) sont supprimés automatiquement de la réponse attendue
+- Exemple : *Prunus avium* `'Burlat'` → réponse attendue : *Prunus avium* (N1/N2)
+- Au niveau 3 et 4 : le nom complet est exigé
+
+### Notice : suppression des mentions institutionnelles
+- "CFA Le Teich · CAPA Jardinier Paysagiste" retiré du sous-titre et du pied de page
+- Applicable pour diffusion externe (commercialisation)
+
+---
+
+## v26e — Fix N0 noms communs + bouton 🔄 (2026-03-18)
+
+### Bug corrigé : niveau Découverte affichait des noms botaniques
+Les propositions de réponse du niveau 0 affichaient les noms botaniques (<em>Rosa canina</em>) au lieu des noms communs (Rosier des haies). Fix : détection `qLevel===0` dans le rendu de l'étape 1 — les options affichent désormais `nom` à la place de `latin`. Le label de phase indique aussi "👀 Découverte — Quel est le nom de cette plante ?".
+
+### Bug corrigé : niveau Découverte affichait une étape 2
+Pour N0, l'étape 2 (question de connaissance) n'a aucun sens. Elle est désormais court-circuitée — `nextRound()` est appelé directement après la réponse photo.
+
+### Bug corrigé : bouton 🔄 Actualiser disparu
+Le bouton avait été perdu lors d'une mise à jour de l'index.html. Restauré à sa place (à gauche de Déconnexion).
+
+---
+
+## v26f — Quiz Intelligent 🧠 (2026-03-18)
+
+### Nouveau : Quiz Intelligent
+Système adaptatif qui compose le pool de 20 végétaux selon la maîtrise individuelle de chaque apprenti.
+
+**Algorithme 60/30/10 :**
+- 🔴 60% (12 végétaux) — végétaux avec erreurs (score < 50%) · triés du plus raté au plus récent
+- ⚪ 30% (6 végétaux) — végétaux jamais vus · ordre aléatoire pour découverte progressive
+- 🟢 10% (2 végétaux) — végétaux bien maîtrisés (score ≥ 50%) · les moins revus récemment
+
+Si une catégorie est vide (ex : aucune erreur), les autres catégories compensent automatiquement.
+
+**Moteur de maîtrise :**
+- Score 0–100% par végétal et par apprenti, mis à jour après chaque quiz
+- Les étapes 1 (photo/orthographe) et 2 (connaissance) sont comptées séparément
+- Stockage localStorage (`cq_mastery_v1_Prénom_AB`) + sync Supabase (`floralab_mastery`)
+- Fonctionne hors ligne avec fallback localStorage
+
+**Bouton 🧠 Quiz Intelligent :**
+- Apparaît sur l'écran de démarrage du quiz, entre les filtres et le bouton Démarrer
+- Activé par défaut — cliquable pour désactiver (quiz aléatoire classique)
+- Affiche en temps réel dès que le prénom est saisi : `🔴 X à retravailler · ⚪ Y à découvrir · 🟢 Z maîtrisés`
+- Respecte le niveau (N0–N4) et les filtres de révision ciblée actifs
+
+**SQL Supabase requis (à exécuter une fois) :**
+```sql
+create table if not exists floralab_mastery (
+  id bigserial primary key,
+  player_name text not null,
+  plant_id integer not null,
+  plant_latin text not null,
+  ok integer default 0,
+  total integer default 0,
+  last_seen bigint default 0,
+  unique(player_name, plant_id)
+);
+alter table floralab_mastery enable row level security;
+create policy "public_all_mastery" on floralab_mastery for all using (true) with check (true);
+```
+
+### Corrections v26e (rappel)
+- 🔄 Bouton Actualiser restauré · 🎉 Célébration N0 inversée · 📋 Brouillon en bas du formulaire
+- 🔍 Filtres adaptés par niveau (N1: 6, N2: 7, N3/N4: 9) · 🎯 Types questions cachés en N0
+- ✏️ Police Arial pour les propositions · 🖥️ PC compact media query
+
+---
+
+## v27 — Refonte quiz par niveau + chips critères + sélection plantes (2026-03-19)
+
+### 🔴 N0 — Niveau Découverte corrigé
+- Étape 1 : identification par le **nom commun** uniquement (pas de nom botanique)
+- Spelling botanique et dictée botanique **supprimés** en N0
+- Mode dictée N0 : écrire le **nom commun** (vérification insensible à la casse)
+- Étape 2 : apparaît seulement si l'apprenti a activé des chips supplémentaires
+
+### 🆕 Chips "Critères supplémentaires" par niveau
+Remplacent les anciens chips "Types de questions" (qui désactivaient des catégories) :
+- **Les chips activent** des types de questions supplémentaires (opt-in, rien par défaut)
+- Chips adaptées à chaque niveau — chaque niveau a ses critères propres
+- N0 : Exposition · Type de végétal · Feuillage · Floraison · Couleur fleurs
+- N1 : Exposition · Type & Rusticité · Feuillage · Floraison · Couleur fleurs
+- N2 : N1 + pH · Humidité sol · Structure sol · Port · Vitesse · Taille · Usage · Intérêts · Reproduction · Pollinisation · Biodiversité · Particularités
+- N3 : N2 + Famille · Classe · Couleur feuillage · Forme feuilles · Texture feuillage
+- N4 : inchangé
+
+### 🆕 Chip "Sélection de plantes"
+- Ouvre un sélecteur où l'apprenti coche les plantes à inclure dans son quiz
+- Sans sélection → pioche aléatoire dans toute la BDD
+- L'apprenti peut ajouter ses fiches **Mes végétaux** à la sélection
+- ⛔ Les fiches perso ne sont jamais transmises à Supabase
+
+### 🖥️ PC compact — Écran de démarrage sans scroll
+- Media query `@media(min-width:768px)` : tout l'écran de démarrage tient dans la fenêtre
+- Icône, titres, cards niveaux, chips, toggle dictée, quiz intelligent, bouton Démarrer — tout réduit proportionnellement
+
+### ✏️ Dictée adaptée au niveau
+- Label du toggle adapté : N0 → « écrire le nom commun » / N1+ → « dictée botanique »
+- N0 : pas de spelling botanique (pas de questions d'orthographe du nom latin)
+
+### Règles inchangées
+- Dictée N1 : mauvaise casse = 0,5 pt · N2/N3 : mauvaise casse = 0 pt
+- Rusticité et dimensions : toujours posées par intervalles, jamais de valeur exacte
+- Questions contraires (NE convient PAS) : 15% en N2/N3
+
+---
+
+## v28 — Ergonomie PC + Stats fixes + Filtres repensés (2026-03-19)
+
+### 🖥️ Layout 2 colonnes sur PC (≥ 900px)
+- Colonne gauche : titre, inputs, cartes niveaux
+- Colonne droite : révision ciblée, critères supplémentaires, dictée, quiz intelligent, bouton Démarrer
+- Tout tient sans scroll — pas de réduction des textes
+
+### 📊 Stats — correction critique
+- Les scores n'étaient pas enregistrés sur Supabase : `startTime` n'existe pas dans la table `floralab_scores`
+- Corrigé : `addScore(sCloud, sLocal)` — Supabase reçoit les colonnes exactes, localStorage conserve `startTime`
+- Les stats admin reçoivent maintenant tous les scores correctement
+
+### 🔍 Révision ciblée — dropdowns inline
+- Suppression du panel séparé qui s'ouvrait sous les chips (doublon confus)
+- Chaque filtre a maintenant son propre dropdown qui s'ouvre directement sous le bouton
+- Valeur active affichée comme badge sur le bouton (ex : 🌿 Type **Arbuste**)
+- Bouton « ✕ Réinitialiser » n'apparaît que si un filtre est actif
+
+### Correction bugs
+- Template literals imbriqués corrigés (compatibilité tous navigateurs)
+
+---
+
+## v31 — PlantNet · Batterie · Photos quiz · Classement par niveaux (2026-03-19)
+
+### 🔍 Identification PlantNet — fonctionnalité complète
+- Bouton 🔍 dans le formulaire "Ajouter une plante" (admin + Mes végétaux, nouvelles fiches uniquement)
+- **Multi-photos** : jusqu'à 4 photos par identification (grille 2×2, drag & drop, suppression unitaire)
+- La clé API est saisie une seule fois par l'admin (onglet 🔍 Pl@ntNet) et stockée dans Supabase (`floralab_config`)
+- Clé **masquée** (`type="password"`) — jamais visible par les apprentis
+- Bouton 🧪 Tester la clé active dans l'onglet admin
+- Si clé non configurée : message "Fonctionnalité non configurée — contacter le formateur"
+
+### 🔍 Résultats PlantNet — recherche & comparaison IA
+- Chaque résultat : checkbox de sélection + bouton ✅ Utiliser + bouton 🔍 Chercher
+- Bouton Chercher → menu choix : Google Search ou Perplexity (IA), ouvre un nouvel onglet
+- **Comparaison** : cocher 2+ résultats → barre avec bouton "🤖 Comparer avec IA" (Perplexity) et "🔍 Google"
+- Prompts orientés **identification botanique** : morphologie feuilles, fleurs, fruits, écorce, port, caractères distinctifs
+
+### 🔋 Optimisation batterie mobile
+- `stopAllPolls()` appelé à la déconnexion (tous les intervals stoppés)
+- `visibilitychange` : tous les polls réseau stoppés quand l'appli passe en arrière-plan, reprise au retour
+- Intervalles multi réduits : 2,5–3s → **5s** (moitié moins de requêtes réseau)
+
+### 📸 Photos du quiz — chargement fiable
+- Suppression du `loading="lazy"` sur les photos de questions (chargement prioritaire)
+- Timer suspendu jusqu'au chargement de la 1ère photo
+- 2 retries automatiques si la photo échoue, puis bouton 🔄 Réessayer
+- Spinner "📷 Chargement…" visible pendant le chargement
+
+### 🏆 Classement par niveaux
+- Remplacement des boutons filtres par une **barre d'onglets** : 🏆 Tous · 👀 N0 · 🌱 N1 · 🎓 N2 · 🔬 N3 · 🏗️ N4
+- Chaque onglet affiche l'historique complet des scores du niveau (équitable, plus de mix)
+- Couleur distinctive par niveau sur l'onglet actif
+- Emojis cohérents avec la page d'accueil du quiz
+
+### Admin — onglet Pl@ntNet
+- Nouvel onglet dans la sidebar admin (🔍 Pl@ntNet)
+- Saisie et sauvegarde de la clé API avec confirmation visuelle (aperçu 4 premiers + 4 derniers caractères)
+- Bouton 🧪 Tester renvoie le code HTTP exact (400 = clé OK, 403 = rejetée)
+
+### Correction bug mobile Admin
+- Clic sur un onglet admin sur mobile → scroll automatique vers le contenu (qui était hors écran)
+
+### SQL Supabase requis (une seule fois)
+```sql
+create table if not exists floralab_config (
+  key text primary key,
+  value text not null
+);
+alter table floralab_config enable row level security;
+create policy "public_read_config" on floralab_config for select using (true);
+create policy "admin_write_config" on floralab_config for all using (true) with check (true);
+```
