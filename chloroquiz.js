@@ -6571,6 +6571,7 @@ const CSV_COLUMNS = [
   {key:'frequenceTaille', label:'Fréquence taille',      hint:'1× / an | 2× / an | 3× / an | Tous les 2-3 ans | Libre (port naturel)'},
   {key:'particularites',  label:'Particularités',        hint:'Texte libre: Épineux – Toxique – Port traçant...'},
   {key:'description',     label:'Description / Notes',   hint:'Texte libre'},
+  {key:'description',     label:'note',                  hint:''},  // alias colonne "note" → description
   {key:'photo',           label:'URL Photo 1',           hint:'https://upload.wikimedia.org/...jpg'},
   {key:'photo2',          label:'URL Photo 2',           hint:''},
   {key:'photo3',          label:'URL Photo 3',           hint:''},
@@ -6749,7 +6750,12 @@ function parseCSVFile(file){
       const imported=[];
       for(let i=dataStart;i<lines.length;i++){
         if(!lines[i].trim()) continue;
-        const vals=parseLine(lines[i]);
+        // Certains exports CSV enveloppent toute la ligne dans des guillemets externes — les retirer
+        var rawLine = lines[i].trim();
+        if(rawLine.startsWith('"') && rawLine.endsWith('"')){
+          rawLine = rawLine.slice(1, -1).replace(/""/g, '"');
+        }
+        const vals=parseLine(rawLine);
         let plant={};
         Object.entries(keyMap).forEach(([idx,key])=>{ plant[key]=(vals[idx]||'').replace(/^"+|"+$/g,''); });
         if(!plant.latin||!plant.latin.trim()) continue; // latin obligatoire
@@ -6790,6 +6796,7 @@ function showCSVPreview(imported){
       </td>
     </tr>`).join('');
 
+  window._csvImportRows = rows;
   document.getElementById('overlay-root').innerHTML=`
     <div class="modal-bg" onclick="if(event.target===this)closeModal()">
       <div class="modal" style="max-width:680px">
@@ -6815,7 +6822,7 @@ function showCSVPreview(imported){
         </div>
         <div style="padding:16px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid rgba(74,184,112,.1)">
           <button onclick="closeModal()" style="padding:10px 20px;background:rgba(255,100,100,.08);border:1px solid rgba(255,100,100,.2);border-radius:10px;color:#ff9999;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Annuler</button>
-          <button onclick="confirmCSVImport(${JSON.stringify(rows).replace(/</g,'\\u003c')})" style="padding:10px 22px;background:linear-gradient(135deg,#1e5030,#2d7a4a);border:none;border-radius:10px;color:white;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer">✅ Importer ${nouveaux} plante(s)</button>
+          <button onclick="confirmCSVImport(window._csvImportRows)" style="padding:10px 22px;background:linear-gradient(135deg,#1e5030,#2d7a4a);border:none;border-radius:10px;color:white;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer">✅ Importer ${nouveaux} plante(s)</button>
         </div>
       </div>
     </div>`;
