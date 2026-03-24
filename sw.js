@@ -1,9 +1,9 @@
 /* ══════════════════════════════════════════════════════
    ChloroQuiz — Service Worker
-   Version: 2026-03-24-v40
+   Version: 2026-03-24-v43
 ══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'chloroquiz-v40';
+const CACHE_NAME = 'chloroquiz-v43';
 
 const PRECACHE_ASSETS = [
   '/chloroquiz/',

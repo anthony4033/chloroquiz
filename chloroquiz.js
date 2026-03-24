@@ -825,16 +825,32 @@ async function migratePhotosToStorage(){
   if(!cloudOk){ alert('Connexion Supabase requise.'); return; }
   let localPlants = [];
   try{ localPlants = JSON.parse(localStorage.getItem(SK_PLANTS)||'[]'); }catch(e){}
-  const withB64 = localPlants.filter(p=>
+  const storageBase = sbConf ? sbConf.url+'/storage/v1/object/public/chloroquiz-photos/' : '';
+
+  // Fusionner mémoire + localStorage pour récupérer toutes les photos base64
+  const allPlants = plants.map(p=>{
+    const lp = localPlants.find(x=>x.id===p.id);
+    if(!lp) return p;
+    return {
+      ...p,
+      photo:  (!p.photo  && lp.photo  && lp.photo.startsWith('data:'))  ? lp.photo  : p.photo,
+      photo2: (!p.photo2 && lp.photo2 && lp.photo2.startsWith('data:')) ? lp.photo2 : p.photo2,
+      photo3: (!p.photo3 && lp.photo3 && lp.photo3.startsWith('data:')) ? lp.photo3 : p.photo3,
+      photo4: (!p.photo4 && lp.photo4 && lp.photo4.startsWith('data:')) ? lp.photo4 : p.photo4,
+    };
+  });
+
+  // Uniquement les photos base64 (depuis téléphone/PC) — pas les URLs
+  const withB64 = allPlants.filter(p=>
     [p.photo,p.photo2,p.photo3,p.photo4].some(x=>x&&x.startsWith('data:'))
   );
   if(!withB64.length){
-    alert('✅ Aucune photo base64 trouvée — déjà migrées ou absentes.');
+    alert('✅ Aucune photo à migrer.\nToutes les photos sont déjà sur le CDN ou absentes.');
     return;
   }
-  if(!confirm('🚀 Migrer '+withB64.length+' plante(s) avec photos vers Supabase Storage CDN ?\n\n'
-    +'Les photos seront converties en URLs publiques.\n'
-    +'Durée estimée : '+Math.ceil(withB64.length*4/10)+' secondes.\n\nContinuer ?')) return;
+  let nPhotos = 0;
+  withB64.forEach(p=>[p.photo,p.photo2,p.photo3,p.photo4].forEach(x=>{ if(x&&x.startsWith('data:')) nPhotos++; }));
+  if(!confirm('🚀 Migrer '+nPhotos+' photo(s) de '+withB64.length+' plante(s) vers Supabase Storage CDN ?\n\nDurée estimée : '+Math.ceil(nPhotos/5)+' secondes.\n\nContinuer ?')) return;
 
   // Indicateur de progression
   var prog = document.createElement('div');
@@ -844,15 +860,22 @@ async function migratePhotosToStorage(){
 
   let done=0, errors=0;
   for(const lp of withB64){
-    const p = plants.find(x=>x.id===lp.id);
+    // Travailler sur la copie enrichie (avec base64 depuis localStorage)
+    const p = allPlants.find(x=>x.id===lp.id) || lp;
     if(!p) continue;
     const slots = [{key:'photo',n:1},{key:'photo2',n:2},{key:'photo3',n:3},{key:'photo4',n:4}];
     for(const {key,n} of slots){
-      if(p[key]&&p[key].startsWith('data:')){
-        prog.innerHTML = '☁️ Migration en cours…\n\n'+p.latin+'\nPhoto '+n+'\n\n'+done+' photos migrées';
-        const url = await uploadPhotoToStorage(p[key], p.latin, n);
-        if(url && !url.startsWith('data:')) p[key] = url;
-        else errors++;
+      const src = p[key];
+      // Uniquement les photos base64 (téléphone/PC)
+      if(src && src.startsWith('data:')){
+        prog.innerHTML = '☁️ Migration en cours…<br><br><strong>'+p.latin+'</strong><br>Photo '+n+'<br><br>'+done+' / '+nPhotos+' photos';
+        const url = await uploadPhotoToStorage(src, p.latin, n);
+        if(url && !url.startsWith('data:')){
+          p[key] = url;
+          // Mettre à jour aussi dans plants[] en mémoire
+          const mp = plants.find(function(x){return x.id===p.id;});
+          if(mp) mp[key] = url;
+        } else errors++;
         done++;
       }
     }
@@ -1186,6 +1209,14 @@ document.getElementById('pw-input').addEventListener('keydown',e=>{if(e.key==='E
 async function checkPassword(){
   const v=document.getElementById('pw-input').value.trim();
   const btn=document.querySelector('.pw-btn');
+  // Si mots de passe pas encore chargés, les charger d'abord
+  if(!PW_USER || !PW_ADMIN){
+    btn.disabled=true;
+    btn.innerHTML='<span class="spinner" style="width:16px;height:16px;border-width:2px;vertical-align:middle"></span> Chargement…';
+    await loadPasswords();
+    btn.disabled=false;
+    btn.innerHTML='Accéder à ChloroQuiz →';
+  }
   if(v===PW_ADMIN||v===PW_USER){
     btn.disabled=true;
     btn.innerHTML='<span class="spinner" style="width:16px;height:16px;border-width:2px;vertical-align:middle"></span> Connexion…';
