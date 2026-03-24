@@ -3,7 +3,7 @@
    Version: 2026-03-24-v43
 ══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'chloroquiz-v46';
+const CACHE_NAME = 'chloroquiz-v47';
 
 const PRECACHE_ASSETS = [
   '/chloroquiz/',
